@@ -101,7 +101,7 @@ class MuskInferenceEncoder(BasePatchEncoder):
             from musk import utils, modeling
         except:
             traceback.print_exc()
-            raise Exception("Please install MUSK `pip install git+https://github.com/lilab-stanford/MUSK`")
+            raise Exception("Please install MUSK `pip install fairscale git+https://github.com/lilab-stanford/MUSK`")
         
         try:
             from timm.models import create_model

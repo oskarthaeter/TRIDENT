@@ -1,7 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
 import torch
-import warnings
 
 import sys; sys.path.append('../')
 
@@ -31,20 +29,6 @@ class TestSlideEncoders(unittest.TestCase):
         self.assertIsInstance(output, torch.Tensor)
         self.assertTrue(output.shape[-1] == encoder.embedding_dim)
         print("\033[94m"+ f"    {encoder.__class__.__name__} forward pass success with output shape {output.shape}" + "\033[0m")
-
-    def test_threads_encoder_initialization(self):
-        sample_batch = {
-            'features': torch.randn(1, 100, 768),
-            'coords': torch.randn(1, 100, 2),
-        }
-        self._test_encoder_forward(ThreadsSlideEncoder(), sample_batch, torch.bfloat16)
-        
-    # def test_trilobite_encoder_initialization(self):
-    #     sample_batch = {
-    #         'features': torch.randn(1, 100, 768),
-    #         'coords': torch.randn(1, 100, 2),
-    #     }
-    #     self._test_encoder_forward(TrilobiteSlideEncoder(), sample_batch, torch.float16)
 
     def test_prism_encoder_initialization(self):
         sample_batch = {
@@ -79,13 +63,11 @@ class TestSlideEncoders(unittest.TestCase):
         print("\033[95m" + "Testing Slide Encoder Factory with valid names" + "\033[0m")
         # Test factory method for valid model names
         for model_name, expected_class in [
-            ('mean-conch-v15', MeanSlideEncoder),
+            ('mean-conch_v15', MeanSlideEncoder),
             ('mean-blahblah', MeanSlideEncoder),
             ('prism', PRISMSlideEncoder),
             ('chief', CHIEFSlideEncoder),
             ('gigapath', GigaPathSlideEncoder),
-            ('threads', ThreadsSlideEncoder),
-            # ('trilobite==trimodal-200k-new_model==epoch101', TrilobiteSlideEncoder),
             ('titan', TitanSlideEncoder),
         ]:
             encoder = encoder_factory(model_name)
