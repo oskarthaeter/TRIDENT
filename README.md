@@ -11,7 +11,7 @@ This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard M
 
 ## Key Features:
 
-<img align="right" src="_readme/trident_crop.png" width="250px" />
+<img align="right" src="_readme/trident_crop.jpg" width="250px" />
 
 - **Tissue Segmentation**: Extract tissue from background using a DeepLabv3 model (supports H&E, IHC, penmark and artifact removal, etc.).
 - **Patch Extraction**: Extract tissue patches of any size and magnification.
@@ -144,11 +144,11 @@ trident outputs a variety of files for quality control. It is recommended that y
 
 1. Segmentation contours are saved in the `./<job_dir>/contours` directory. These are thumbnails of the WSI with the tissue contours drawn in green.
 
-<img src="_readme/contours.png" alt="WSI thumbnail with the tissue contours drawn in green." height="150px">
+<img src="_readme/contours.jpg" alt="WSI thumbnail with the tissue contours drawn in green." height="150px">
 
 2. Patch annotations are saved in the `./<job_dir>/<patch_dir>/visualization` directory. These are thumbnails of the WSI with the patch borders drawn in red.
 
-<img src="_readme/viz.png" alt="Patches drawn on top of the original WSI." height="150px">
+<img src="_readme/viz.jpg" alt="Patches drawn on top of the original WSI." height="150px">
 
 ## Need for Speed
 Trident offers two optional ways to meet those conference deadlines on short notice: caching and multiprocessing.
@@ -303,4 +303,4 @@ If you find our work useful in your research or if you use parts of this code, p
 }
 ```
 
-<img src=.github/joint_logo.png> 
+<img src="_readme/joint_logo.png"> 
