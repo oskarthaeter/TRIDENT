@@ -1,6 +1,6 @@
 # 🔱   Trident
 
- [arXiv](https://arxiv.org/abs/2501.16652) | [Cite](https://github.com/mahmoodlab/trident?tab=readme-ov-file#reference) | [License](https://github.com/mahmoodlab/trident?tab=readme-ov-file#license-and-terms-of-tuse)
+ [arXiv](https://arxiv.org/abs/2502.06750) | [Cite](https://github.com/mahmoodlab/trident?tab=readme-ov-file#reference) | [License](https://github.com/mahmoodlab/trident?tab=readme-ov-file#license-and-terms-of-tuse)
 
 
 Trident is a toolkit for large-scale whole-slide image processing.
