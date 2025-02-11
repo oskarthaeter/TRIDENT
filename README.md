@@ -138,18 +138,6 @@ Trident supports 5 slide encoders, loaded via a slide-level [`encoder_factory`](
 
 Please see our [tutorials](https://github.com/mahmoodlab/trident/tree/main/tutorials) for more cool things you can do with Trident and a more [detailed readme](https://github.com/mahmoodlab/trident/blob/main/DETAILS.md) for additional features.
 
-## Quality Control
-
-trident outputs a variety of files for quality control. It is recommended that you review these files after each step to ensure that the results are as expected.
-
-1. Segmentation contours are saved in the `./<job_dir>/contours` directory. These are thumbnails of the WSI with the tissue contours drawn in green.
-
-<img src="_readme/contours.jpg" alt="WSI thumbnail with the tissue contours drawn in green." height="150px">
-
-2. Patch annotations are saved in the `./<job_dir>/<patch_dir>/visualization` directory. These are thumbnails of the WSI with the patch borders drawn in red.
-
-<img src="_readme/viz.jpg" alt="Patches drawn on top of the original WSI." height="150px">
-
 ## 🙋 FAQ
 - **Q**: How do I extract patch embeddings from legacy patch coordinates extracted with [CLAM](https://github.com/mahmoodlab/CLAM)?
    - **A**:
