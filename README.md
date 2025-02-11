@@ -16,7 +16,7 @@ This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard M
 - **Tissue Segmentation**: Extract tissue from background using a DeepLabv3 model (supports H&E, IHC, penmark and artifact removal, etc.).
 - **Patch Extraction**: Extract tissue patches of any size and magnification.
 - **Patch Feature Extraction**: Extract patch embeddings from tissue patches using 13 popular foundation models, including [UNI](https://www.nature.com/articles/s41591-024-02857-3), [CONCH](https://www.nature.com/articles/s41591-024-02856-4), [Virchow](https://www.nature.com/articles/s41591-024-03141-0), [H-Optimus-0](https://github.com/bioptimus/releases/tree/main/models/h-optimus/v0) and many more...
-- **Slide Feature Extraction**: Extract slide embeddings from pre-extracted patch embeddings using 5 whole-slide foundation models, including [Titan](https://arxiv.org/abs/2411.19666), 
+- **Slide Feature Extraction**: Extract slide embeddings from pre-extracted patch embeddings using 5 whole-slide foundation models, including [Threads](https://arxiv.org/abs/2501.16652), [Titan](https://arxiv.org/abs/2411.19666), 
 [PRISM](https://arxiv.org/abs/2405.10254), [GigaPath](https://www.nature.com/articles/s41586-024-07441-w) and [CHIEF](https://www.nature.com/articles/s41586-024-07894-z). 
 
 ## Getting Started:
