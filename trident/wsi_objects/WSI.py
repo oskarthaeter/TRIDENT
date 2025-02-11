@@ -335,6 +335,8 @@ class OpenSlideWSI:
                 mpp_x = 25400 / float(x_resolution)  # 1 inch = 25,400 microns
             else:
                 return None  # Unsupported unit -- add more conditions is needed. 
+            
+        mpp_x = round(mpp_x, 4)
 
         return mpp_x
 
