@@ -23,21 +23,28 @@ This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard M
 
 ### 🔨 1. **Installation**:
 - Create a conda environment: `conda create -n "trident" python=3.10`, and activate it `conda activate trident`.
-- **With cloning**:
+- **Install from local clone**:
     - `git clone https://github.com/mahmoodlab/trident.git && cd trident`.
     - Local install with running `pip install -e .`.
-- **With pip**:
+- **Install with pip**:
     - `pip install git+https://github.com/mahmoodlab/trident.git `
 - Additional packages may be required if you are loading specific pretrained models. Follow error messages for additional instructions.
 
 ### 🔨 2. **Running Trident**:
 
-**Are you experienced with WSI processing?**
+**Feeling lucky?**
 
-Process a batch of WSIs for patch feature extraction at once with:
+Want patch features, fast? Perform all processing steps (segmentation, patching, patch feature extraction using UNI) for a whole directory of WSIs in a single command:
 
 ```
 python run_batch_of_slides.py --task all --wsi_dir wsis --job_dir ./trident_processed --patch_encoder uni_v1 --mag 20 --patch_size 256
+```
+
+**Feeling cautious?**
+
+Run this script to perform all processing steps for just a single slide:
+```
+python run_single_slide.py --slide_path wsis/xxxx.svs --job_dir ./trident_processed --patch_encoder uni_v1 --mag 20 --patch_size 256
 ```
 
 **Or follow step-by-step instructions:**
@@ -82,13 +89,13 @@ python run_batch_of_slides.py --task all --wsi_dir wsis --job_dir ./trident_proc
    - `--task feat`: Specifies that you want to do feature extraction.
    - `--wsi_dir wsis`: Path to the directory containing WSIs.
    - `--job_dir ./trident_processed`: Output directory for processed results.
-   - `--patch_encoder uni_v1`: Uses the `UNI` patch encoder. Could also be `conch_v1`, `ctranspath`, `gigapath`, `virchow`, `hoptimus0`, etc. See below for list of supported models. 
+   - `--patch_encoder uni_v1`: Uses the `UNIv1` patch encoder. Could also be `conch_v1`, `ctranspath`, `gigapath`, `virchow`, `hoptimus0`, etc. See below for list of supported models. 
    - `--mag 20`: Features are extracted from patches at 20x magnification.
    - `--patch_size 256`: Patches are 256x256 pixels in size.
  - **Outputs**: 
    - Features are saved as h5 files in `./trident_processed/20x_256px/features_uni_v1`. (Shape: `(n_patches, feature_dim)`)
 
-Trident supports 13 patch encoders, loaded via our [`encoder_factory`](https://github.com/mahmoodlab/trident/blob/main/trident/patch_encoder_models/load.py#L11). Models requiring specific installations will return error messages with additional instructions. Gated models on HuggingFace require access requests: 
+Trident supports 13 patch encoders, loaded via a patch-level [`encoder_factory`](https://github.com/mahmoodlab/trident/blob/main/trident/patch_encoder_models/load.py#L14). Models requiring specific installations will return error messages with additional instructions. Gated models on HuggingFace require access requests.
 
 - **UNI**: [MahmoodLab/UNI](https://huggingface.co/MahmoodLab/UNI)  (`--patch_encoder uni_v1`)
 - **UNIv2**: [MahmoodLab/UNI2-h](https://huggingface.co/MahmoodLab/UNI2-h)  (`--patch_encoder uni_v2`)
@@ -105,7 +112,7 @@ Trident supports 13 patch encoders, loaded via our [`encoder_factory`](https://g
 - **ResNet50**: Pretrained on ImageNet via torchvision.  (`--patch_encoder resnet50`)
 
 **Step 3b: Slide Feature Extraction**
- - **Description**: Extracts slide embeddings using a specified slide encoder. If not pre-extracted, this command will automatically extract patch embeddings too. 
+ - **Description**: Extracts slide embeddings using a specified slide encoder. If patch embeddings are not already extracted, this command will automatically extract patch embeddings too. 
  - **Command**:
    ```bash
    python run_batch_of_slides.py --task feat --wsi_dir wsis --job_dir ./trident_processed --slide_encoder titan --mag 20 --patch_size 512 
@@ -113,29 +120,51 @@ Trident supports 13 patch encoders, loaded via our [`encoder_factory`](https://g
    - `--task feat`: Specifies that you want to do feature extraction.
    - `--wsi_dir wsis`: Path to the directory containing WSIs.
    - `--job_dir ./trident_processed`: Output directory for processed results.
-   - `--slide_encoder titan`: Uses the `Titan` slide encoder. Could also be `prism`, `gigapath`, `chief`, and `threads` (soon!). 
+   - `--slide_encoder titan`: Uses the `Titan` slide encoder. Could also be `prism`, `gigapath`, `chief`, and `threads` (coming soon!). 
    - `--mag 20`: Features are extracted from patches at 20x magnification.
    - `--patch_size 512`: Patches are 512x512 pixels in size.
  - **Outputs**: 
    - Features are saved as h5 files in `./trident_processed/20x_256px/slide_features_titan`. (Shape: `(feature_dim)`)
 
-Supported models include:
+Trident supports 5 slide encoders, loaded via a slide-level [`encoder_factory`](https://github.com/mahmoodlab/trident/blob/main/trident/slide_encoder_models/load.py#L14). Models requiring specific installations will return error messages with additional instructions. Gated models on HuggingFace require access requests.
 - **Threads**: Coming Soon! [MahmoodLab/threads](https://huggingface.co/MahmoodLab/threads) (`--slide_encoder threads`).
 - **Titan**: [MahmoodLab/TITAN](https://huggingface.co/MahmoodLab/TITAN) (`--slide_encoder titan`)
 - **PRISM**: [paige-ai/Prism](https://huggingface.co/paige-ai/Prism) (`--slide_encoder prism`)
 - **CHIEF**: [CHIEF](https://github.com/hms-dbmi/CHIEF) (`--slide_encoder chief`)
 - **GigaPath**: [prov-gigapath]()  (`--slide_encoder gigapath`)
 
-**Note**: `trident` will embed each slide independently rather than in a patient-specific manner. This is because defining patient-specific embeddings requires additional inputs (such as a mapping between patient and slide). However, the goal is to provide quick and off-the-shelf slide embeddings. [patho-bench](https://github.com/mahmoodlab/Patho-Bench) can assist in extracting patient embeddings by aggregating multiple slides per patient.
+> [!NOTE]
+> If you have a patient containing multiple slides, you have two ways for constructing whole-patient embeddings: processing each slide independently and taking the average of the slide features (late fusion) or pooling all patches together and processing that as a single "pseudo-slide" (early fusion). You can use Trident-generated slide embeddings in your own late fusion pipeline, or use Trident-generated patch embeddings in your own early fusion pipeline. For an implementation of both fusion strategies, please check out our sister repository [Patho-Bench](https://github.com/mahmoodlab/Patho-Bench).
 
-Additional information is provided in `tutorials`.
+Please see our [tutorials](https://github.com/mahmoodlab/trident/tree/main/tutorials) for more cool things you can do with Trident.
 
-**Feeling overwhelmed?**
+## Custom Pipelines
 
-Run the single slide processing script:
+Trident provides two simple `encoder_factory` functions for loading many patch and slide encoders through a unified API. You can import `encoder_factory` and load pretrained foundation model encoders into your own pipeline for inference or finetuning.
 
+### Patch Encoders
+```python
+from trident.patch_encoder_models.load import encoder_factory
+encoder = encoder_factory("uni_v1") # Or any other encoder name
+# Attributes:
+print(encoder.enc_name)         # Model name 
+print(encoder.eval_transforms)  # PyTorch transforms to process the input image
+print(encoder.precision)        # Recommended precision to run the model
 ```
-python run_single_slide.py --slide_path wsis/xxxx.svs --job_dir ./trident_processed --mag 20 --patch_size 256
+
+### Slide Encoders
+```python
+from trident.slide_encoder_models.load import encoder_factory
+encoder = encoder_factory("titan") # Or any other encoder name
+# Attributes:
+print(encoder.enc_name)         # Model name
+print(encoder.precision)        # Recommended precision to run the model
+```
+
+Some encoders take optional keyword arguments. For example, the `conch_v1` encoder can be run with or without the projection head. These keyword arguments can be passed directly to encoder_factory:
+
+```python
+encoder = encoder_factory("conch_v1", with_proj=True)
 ```
 
 ## Quality Control
@@ -188,36 +217,7 @@ python run_batch_of_slides.py --task seg --wsi_dir ./wsis --job_dir ./trident_pr
 - Running multiple instances in parallel does not necessarily speed up processing, because of CPU or I/O bottlenecks. For example, on my machine I find that running more than 3 feature extraction instances in parallel causes things to lock up. Running multiple instances of the same task is probably only helpful if your bottleneck is the GPU. Keep track of your CPU load using `htop`.
 - If you are concurrently running two consecutive tasks (e.g., patching and feature extraction), make sure that the upstream task is faster than the downstream task. Otherwise, the downstream task will end up skipping slides because the upstream task has not yet finished processing them. In case this happens, just rerun the downstream task once the upstream task has finished.
 
-## Custom Pipelines
-
-Trident provides a simple `encoder_factory` function for loading many patch and slide encoders through a unified API. You can therefore load encoders into your own pipeline for inference or finetuning.
-
-### Patch Encoders
-```python
-from trident.patch_encoder_models.load import encoder_factory
-encoder = encoder_factory("uni_v1") # Or any other encoder name
-# also comes with:
-print(encoder.enc_name)         # Model name 
-print(encoder.eval_transforms)  # PyTorch transforms to process the input image
-print(encoder.precision)        # Recommended precision to run the model
-```
-
-### Slide Encoders
-```python
-from trident.slide_encoder_models.load import encoder_factory
-encoder = encoder_factory("titan") # Or any other encoder name
-# also comes with:
-print(encoder.enc_name)         # Model name
-print(encoder.precision)        # Recommended precision to run the model
-```
-
-Some encoders take optional keyword arguments. For example, the `conch_v1` encoder can be run with or without the projection head. These keyword arguments can be passed directly to encoder_factory:
-
-```python
-encoder = encoder_factory("conch_v1", with_proj=True)
-```
-
-## Details
+## Under the Hood
 
 ### Segmentation
 Segmentation is performed by a [DeepLabV3 model](https://arxiv.org/abs/1706.05587v3) finetuned specifically to segment tissue from background in WSIs. By default, `run_trident.py` segments at 10x magnification. Use `--fast_seg` to segment at 5x magnification, which is faster but may be less accurate. If neither option yields good results, you can manually set `seg_mag` in `processor.run_segmentation_job()` to a higher magnification level. Note that higher magnification levels will be substantially slower.
@@ -261,7 +261,7 @@ main()
 ```
 
 - **Q**: I am not satisfied with the tissue vs background segmentation. What can I do?
-   - **A**: Trident uses GeoJSON to store and load segmentations. This format is also compatible with [QuPath](https://qupath.github.io/), enabling seamless integration. You can load the Trident segmentation into QuPath, modify it using QuPath's annotation tools, and save the updated segmentation back to GeoJSON. You can also force the segmentation to happen at 20x (which will be slower). 
+   - **A**: Trident uses GeoJSON to store and load segmentations. This format is natively supported by [QuPath](https://qupath.github.io/). You can load the Trident segmentation into QuPath, modify it using QuPath's annotation tools, and save the updated segmentation back to GeoJSON.
 
 - **Q**: I want to process a custom list of WSIs. Can I do it? Also, most of my WSIs don't have the micron per pixel (mpp) stored. Can I pass it?
    - **A**: Yes using the `--custom_list_of_wsis` argument. Provide a list of WSI names in a CSV (with slide extension, `wsi`). Optionally, provide the mpp (field `mpp`)
@@ -285,7 +285,7 @@ The project was built on top of amazing repositories such as [Timm](https://gith
 
 ## Reference
 
-If you find our work useful in your research or if you use parts of this code, please consider citing our paper:
+If you find our work useful in your research or if you use parts of this code, please consider citing our papers:
 
 ```
 @article{vaidya2025molecular,
