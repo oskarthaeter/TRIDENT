@@ -8,7 +8,7 @@ from trident.IO import get_weights_path
 import warnings
 
 """
-This file contains an assortment of pretrained slide encoders, including THREADS (ours) and baselines.
+This file contains an assortment of pretrained slide encoders, all loadable via the encoder_factory() function.
 """
 
 def encoder_factory(model_name, pretrained=True, freeze=True, **kwargs):
