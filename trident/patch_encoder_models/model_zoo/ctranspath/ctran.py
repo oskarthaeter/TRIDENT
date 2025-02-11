@@ -1,3 +1,6 @@
+"""
+Credits to original CTransPath implementation: https://github.com/Xiyue-Wang/TransPath/blob/main/ctran.py
+"""
 
 from timm_ctp.models.layers.helpers import to_2tuple
 from timm_ctp import create_model as ctp_create_model
