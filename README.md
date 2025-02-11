@@ -22,7 +22,7 @@ This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard M
 ## Getting Started:
 
 ### 🔨 1. **Installation**:
-- Create a conda environment: `conda create -n "trident" python=3.10`, and activate it `conda activate trident`.
+- Create an environment: `conda create -n "trident" python=3.10`, and activate it `conda activate trident`.
 - **Install from local clone**:
     - `git clone https://github.com/mahmoodlab/trident.git && cd trident`.
     - Local install with running `pip install -e .`.
@@ -32,9 +32,9 @@ This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard M
 
 ### 🔨 2. **Running Trident**:
 
-**Feeling lucky?**
+**Already familiar with WSI processing?**
 
-Want patch features, fast? Perform all processing steps (segmentation, patching, patch feature extraction using UNI) for a whole directory of WSIs in a single command:
+Want patch embeddings? Perform segmentation, patching, and UNI feature extraction for a directory of WSIs in a single command:
 
 ```
 python run_batch_of_slides.py --task all --wsi_dir wsis --job_dir ./trident_processed --patch_encoder uni_v1 --mag 20 --patch_size 256
@@ -49,8 +49,7 @@ python run_single_slide.py --slide_path wsis/xxxx.svs --job_dir ./trident_proces
 
 **Or follow step-by-step instructions:**
 
-**Step 1: Tissue Segmentation**
- - **Description**: Segments tissue vs. background regions from a list of WSIs in `wsi_dir`.
+**Step 1: Tissue Segmentation:** Segments tissue vs. background from a list of WSIs
  - **Command**:
    ```bash
    python run_batch_of_slides.py --task seg --wsi_dir ./wsis --job_dir ./trident_processed --gpu 0
@@ -64,8 +63,7 @@ python run_single_slide.py --slide_path wsis/xxxx.svs --job_dir ./trident_proces
    - WSI thumbnails annotated with tissue contours are saved in `./trident_processed/contours`.
    - GeoJSON files containing tissue contours are saved in `./trident_processed/contours_geojson`. These can be opened in [QuPath](https://qupath.github.io/) for editing/quality control, if necessary.
 
- **Step 2: Tissue Patching**
- - **Description**: Extracts patches from segmented tissue regions at a specific magnification.
+ **Step 2: Tissue Patching:** Extracts patches from segmented tissue regions at a specific magnification.
  - **Command**:
    ```bash
    python run_batch_of_slides.py --task coords --wsi_dir wsis --job_dir ./trident_processed --mag 20 --patch_size 256 --overlap 0
@@ -80,8 +78,7 @@ python run_single_slide.py --slide_path wsis/xxxx.svs --job_dir ./trident_proces
    - Patch coordinates are saved as h5 files in `./trident_processed/20x_256px/patches`.
    - WSI thumbnails annotated with patch borders are saved in `./trident_processed/20x_256px/visualization`.
 
- **Step 3a: Patch Feature Extraction**
- - **Description**: Extracts features from tissue patches using a specified encoder.
+ **Step 3a: Patch Feature Extraction:** Extracts features from tissue patches using a specified encoder
  - **Command**:
    ```bash
    python run_batch_of_slides.py --task feat --wsi_dir wsis --job_dir ./trident_processed --patch_encoder uni_v1 --mag 20 --patch_size 256 
@@ -111,8 +108,7 @@ Trident supports 13 patch encoders, loaded via a patch-level [`encoder_factory`]
 - **CTransPath**: Automatic download  (`--patch_encoder ctranspath`)
 - **ResNet50**: Pretrained on ImageNet via torchvision.  (`--patch_encoder resnet50`)
 
-**Step 3b: Slide Feature Extraction**
- - **Description**: Extracts slide embeddings using a specified slide encoder. If patch embeddings are not already extracted, this command will automatically extract patch embeddings too. 
+**Step 3b: Slide Feature Extraction:** Extracts slide embeddings using a slide encoder. Will also automatically extract patch embeddings. 
  - **Command**:
    ```bash
    python run_batch_of_slides.py --task feat --wsi_dir wsis --job_dir ./trident_processed --slide_encoder titan --mag 20 --patch_size 512 
