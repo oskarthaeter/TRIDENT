@@ -136,7 +136,7 @@ Trident supports 5 slide encoders, loaded via a slide-level [`encoder_factory`](
 > [!NOTE]
 > If you have a patient containing multiple slides, you have two ways for constructing whole-patient embeddings: processing each slide independently and taking the average of the slide features (late fusion) or pooling all patches together and processing that as a single "pseudo-slide" (early fusion). You can use Trident-generated slide embeddings in your own late fusion pipeline, or use Trident-generated patch embeddings in your own early fusion pipeline. For an implementation of both fusion strategies, please check out our sister repository [Patho-Bench](https://github.com/mahmoodlab/Patho-Bench).
 
-Please see our [tutorials](https://github.com/mahmoodlab/trident/tree/main/tutorials) for more cool things you can do with Trident.
+Please see our [tutorials](https://github.com/mahmoodlab/trident/tree/main/tutorials) for more cool things you can do with Trident and a more [detailed readme](https://github.com/mahmoodlab/trident/blob/main/DETAILS.md) for additional features.
 
 ## Quality Control
 
