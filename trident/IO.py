@@ -669,6 +669,7 @@ def overlay_gdf_on_thumbnail(
  
     # Save the annotated image
     os.makedirs(os.path.dirname(contours_saveto), exist_ok=True)
+    cropped_annotated = cv2.cvtColor(cropped_annotated, cv2.COLOR_BGR2RGB)
     cv2.imwrite(contours_saveto, cropped_annotated)
 
 # .tools.register_tool(imports=["import numpy as np"])
