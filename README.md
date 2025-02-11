@@ -104,7 +104,7 @@ Trident supports 13 patch encoders, loaded via a patch-level [`encoder_factory`]
 - **Prov-Gigapath**: [prov-gigapath](https://huggingface.co/prov-gigapath/prov-gigapath)  (`--patch_encoder gigapath`)
 - **H-Optimus-0**: [bioptimus/H-optimus-0](https://huggingface.co/bioptimus/H-optimus-0)  (`--patch_encoder hoptimus0`)
 - **MUSK**: [xiangjx/musk](https://huggingface.co/xiangjx/musk)  (`--patch_encoder musk`)
-- **CTransPath**: Automatic download  (`--patch_encoder ctranspath`)
+- **CTransPath-CHIEF**: Automatic download  (`--patch_encoder ctranspath`)
 - **ResNet50**: Pretrained on ImageNet via torchvision.  (`--patch_encoder resnet50`)
 
 **Step 3b: Slide Feature Extraction:** Extracts slide embeddings using a slide encoder. Will also automatically extract patch embeddings. 
