@@ -24,7 +24,7 @@ This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard M
 ### 🔨 1. **Installation**:
 - Create a conda environment: `conda create -n "trident" python=3.10`, and activate it `conda activate trident`.
 - **With cloning**:
-    - `git clone git@github.com:mahmoodlab/trident.git && cd trident`.
+    - `git clone https://github.com/mahmoodlab/trident.git && cd trident`.
     - Local install with running `pip install -e .`.
 - **With pip**:
     - `pip install git+https://github.com/mahmoodlab/trident.git `
