@@ -48,8 +48,8 @@ def parse_arguments():
                         help='Patch size for coords/image extraction')
     parser.add_argument('--overlap', type=int, default=0, 
                         help='Absolute overlap for patching in pixels. Defaults to 0. ')
-    parser.add_argument('--min_tissue_proportion', type=int, default=0, 
-                        help='Minimum proportion of the patch under tissue to be kept. Defaults to 0. ')
+    parser.add_argument('--min_tissue_proportion', type=float, default=0., 
+                        help='Minimum proportion of the patch under tissue to be kept. Between 0. and 1.0. Defaults to 0. ')
     parser.add_argument('--coords_dir', type=str, default=None, 
                         help='Directory to save/restore tissue coordinates')
     # Feature extraction arguments 
