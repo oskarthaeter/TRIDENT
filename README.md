@@ -1,10 +1,9 @@
 # 🔱   Trident
 
- [arXiv](https://arxiv.org/abs/2502.06750) | [Cite](https://github.com/mahmoodlab/trident?tab=readme-ov-file#reference) | [License](https://github.com/mahmoodlab/trident?tab=License-1-ov-file)
-
+ [arXiv](https://arxiv.org/pdf/2502.06750) | [Cite](https://github.com/mahmoodlab/trident?tab=readme-ov-file#reference) | [License](https://github.com/mahmoodlab/trident?tab=License-1-ov-file)
 
 Trident is a toolkit for large-scale whole-slide image processing.
-This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard Medical School and Brigham and Women's Hospital.
+This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard Medical School and Brigham and Women's Hospital. This work was funded by NIH NIGMS R35GM138216.
 
 > [!NOTE]
 > Contributions are welcome! Please report any issues. You may also contribute by opening a pull request.
@@ -189,11 +188,21 @@ The project was built on top of amazing repositories such as [Timm](https://gith
 - If GitHub issues are inappropriate, email gjaume@bwh.harvard.edu and andrewzh@mit.edu.
 - Immediate response to minor issues may not be available.
 
+## Funding
+This work was funded by NIH NIGMS [R35GM138216](https://reporter.nih.gov/search/sWDcU5IfAUCabqoThQ26GQ/project-details/10029418).
+
 ## How to cite
 
 If you find our work useful in your research or if you use parts of this code, please consider citing our papers:
 
 ```
+@article{zhang2025standardizing,
+  title={Accelerating Data Processing and Benchmarking of AI Models for Pathology},
+  author={Zhang, Andrew and Jaume, Guillaume and Vaidya, Anurag and Ding, Tong and Mahmood, Faisal},
+  journal={arXiv preprint arXiv:2502.06750},
+  year={2025}
+}
+
 @article{vaidya2025molecular,
   title={Molecular-driven Foundation Model for Oncologic Pathology},
   author={Vaidya, Anurag and Zhang, Andrew and Jaume, Guillaume and Song, Andrew H and Ding, Tong and Wagner, Sophia J and Lu, Ming Y and Doucet, Paul and Robertson, Harry and Almagro-Perez, Cristina and others},
@@ -201,12 +210,6 @@ If you find our work useful in your research or if you use parts of this code, p
   year={2025}
 }
 
-@article{zhang2025standardizing,
-  title={Accelerating Data Processing and Benchmarking of AI Models for Pathology},
-  author={Zhang, Andrew and Jaume, Guillaume and Vaidya, Anurag and Ding, Tong and Mahmood, Faisal},
-  journal={arXiv preprint arXiv:2502.06750},
-  year={2025}
-}
 ```
 
 <img src="_readme/joint_logo.png"> 
