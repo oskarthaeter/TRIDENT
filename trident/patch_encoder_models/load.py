@@ -7,6 +7,9 @@ from trident.patch_encoder_models.utils.constants import get_constants
 from trident.patch_encoder_models.utils.transform_utils import get_eval_transforms
 from trident.IO import get_weights_path
 
+"""
+This file contains an assortment of pretrained patch encoders, all loadable via the encoder_factory() function.
+"""
 
 def encoder_factory(model_name, **kwargs):
     '''
