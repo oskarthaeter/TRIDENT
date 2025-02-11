@@ -193,7 +193,7 @@ The project was built on top of amazing repositories such as [Timm](https://gith
 - If GitHub issues are inappropriate, email gjaume@bwh.harvard.edu and andrewzh@mit.edu.
 - Immediate response to minor issues may not be available.
 
-## Reference
+## How to cite
 
 If you find our work useful in your research or if you use parts of this code, please consider citing our papers:
 
