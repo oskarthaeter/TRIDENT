@@ -182,7 +182,7 @@ class CTransPathInferenceEncoder(BasePatchEncoder):
             downloaded_file_path = hf_hub_download(
                 repo_id="MahmoodLab/hest-bench",
                 repo_type="dataset",
-                filename="ctranspath.pth",
+                filename="CHIEF_CTransPath.pth",
                 subfolder="fm_v1/ctranspath",
                 local_dir=weights_dir,  
             )

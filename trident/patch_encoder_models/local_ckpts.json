@@ -2,7 +2,7 @@
     "conch_v1": "",
     "uni_v1": "",
     "uni_v2": "",
-    "ctranspath": "./ctranspath/ctranspath.pth",
+    "ctranspath": "./ctranspath/CHIEF_CTransPath.pth",
     "phikon": "./phikon",
     "resnet50": "",
     "gigapath": "",
