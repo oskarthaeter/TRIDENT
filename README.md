@@ -231,16 +231,16 @@ Given a set of WSIs and patch coordinates, Trident's feature extraction module e
 The `batch_size` parameter can be used to limit the number of patches processed in parallel. It is recommended to set `batch_size` as high as possible without running out of VRAM. The provided image encoder has only the following requirements: (1) must subclass `nn.Module`, (2) must have a `forward` method which takes a tensor of shape (b c h w) and returns a tensor of shape (b f). The image encoder must also have a `transforms` attribute, which should resize the image to the size expected by the image encoder and apply any other necessary transformations (including normalization and conversion to tensor). 
 
 ## 🙋 FAQ
-- **Q**: How do I extract patch embeddings from legacy patch coordinates extracted with CLAM?
+- **Q**: How do I extract patch embeddings from legacy patch coordinates extracted with [CLAM](https://github.com/mahmoodlab/CLAM)?
    - **A**:
       ```bash
       python run_batch_of_slides.py --task feat --wsi_dir ..wsis --job_dir legacy_dir --patch_encoder uni_v1 --mag 20 --patch_size 256 --coords_dir extracted_mag20x_patch256_fp/
       ```
 - **Q**: How do I keep patches corresponding to holes in the tissue?
-   - **A**: Set `holes_are_tissue` to `True` when running the segmentation job. Holes will be counted as part of tissue in contours and masks.
+   - **A**: In `run_batch_of_slides`, this behavior is default. Set `--remove_holes` to exclude patches on top of holes.
 
 - **Q**: I see weird messages when building models using timm. What is happening?
-   - **A**: Make sure your `timm==0.9.16` is installed. `timm==1.X.X` creates issues with most models. 
+   - **A**: Make sure `timm==0.9.16` is installed. `timm==1.X.X` creates issues with most models. 
 
 - **Q**: How can I use `run_single_slide.py` and `run_batch_of_slides.py` in other repos with minimal work?
   - **A**: Make sure `trident` is installed using `pip install -e .`. Then, both scripts are exposed and can be integrated into any Python code, e.g., as
@@ -262,12 +262,14 @@ main()
 
 - **Q**: I am not satisfied with the tissue vs background segmentation. What can I do?
    - **A**: Trident uses GeoJSON to store and load segmentations. This format is natively supported by [QuPath](https://qupath.github.io/). You can load the Trident segmentation into QuPath, modify it using QuPath's annotation tools, and save the updated segmentation back to GeoJSON.
+   - **A**: You can try rerunning the segmentation step at a higher magnification (which may be slower, but more accurate).
+   - **A**: You can finetune the Trident segmentation model on a few annotated examples to improve performance for your specific use case.
 
 - **Q**: I want to process a custom list of WSIs. Can I do it? Also, most of my WSIs don't have the micron per pixel (mpp) stored. Can I pass it?
    - **A**: Yes using the `--custom_list_of_wsis` argument. Provide a list of WSI names in a CSV (with slide extension, `wsi`). Optionally, provide the mpp (field `mpp`)
  
  - **Q**: Do I need to install any additional packages to use Trident?
-   - **A**: Most models require additional installation (e.g., CtransPath feature extraction require to run `pip install timm_ctp`). Follow error messages that provide the steps to run your favorite model. 
+   - **A**: Most pretrained models require additional dependencies (e.g., the CTransPath patch encoder requires `pip install timm_ctp`). When you load a model using Trident, it will tell you what dependencies are missing and how to install them. 
 
 ## License and Terms of Tuse
 
@@ -280,7 +282,7 @@ The project was built on top of amazing repositories such as [Timm](https://gith
 ## Issues
 
 - The preferred mode of communication is via GitHub issues.
-- If GitHub issues are inappropriate, email gjaume@bwh.harvard.edu (and cc andrewzh@mit.edu).
+- If GitHub issues are inappropriate, email gjaume@bwh.harvard.edu and andrewzh@mit.edu.
 - Immediate response to minor issues may not be available.
 
 ## Reference
