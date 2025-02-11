@@ -27,7 +27,7 @@ This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard M
     - `git clone git@github.com:mahmoodlab/trident.git && cd trident`.
     - Local install with running `pip install -e .`.
 - **With pip**:
-    - `pip install git+ssh://git@github.com:mahmoodlab/trident.git`
+    - `pip install git+https://github.com/mahmoodlab/trident.git `
 - Additional packages may be required if you are loading specific pretrained models. Follow error messages for additional instructions.
 
 ### 🔨 2. **Running Trident**:
