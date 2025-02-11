@@ -298,8 +298,8 @@ If you find our work useful in your research or if you use parts of this code, p
 }
 
 @article{zhang2025standardizing,
-  title={Standardizing Preprocessing and Benchmarking of AI Models for Pathology},
-  author={Zhang, Andrew and Jaume, Guillaume and Vaidya, Anurag and others},
+  title={Accelerating Data Processing and Benchmarking of AI Models for Pathology},
+  author={Zhang, Andrew and Jaume, Guillaume and Vaidya, Anurag and Ding, Tong and Mahmood, Faisal},
   journal={arXiv preprint arXiv:2502.06750},
   year={2025}
 }
