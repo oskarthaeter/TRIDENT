@@ -18,7 +18,8 @@ setup(
         'timm==0.9.16',
         'einops_exts',
         'geopandas',
-        'huggingface_hub'
+        'huggingface_hub',
+        'openslide-bin'
     ],
     entry_points={
         'console_scripts': [
