@@ -183,17 +183,51 @@ class CHIEFSlideEncoder(BaseSlideEncoder):
         self.enc_name = 'chief'
         weights_path = get_weights_path('slide', self.enc_name)
 
+        # Ensure model can be built.
         try:
-            import sys; sys.path.append(weights_path)
+            sys.path.append(weights_path)
             from models.CHIEF import CHIEF
-        except:
+        except Exception:
             traceback.print_exc()
-            raise Exception(f"Problem importing CHIEF repo from {weights_path}. Please clone CHIEF from https://github.com/hms-dbmi/CHIEF/ and set the path in load_ckpts.json. Also, please check that CHIEF dependencies are installed.")
+            raise Exception(
+                f"\nError: Unable to import the CHIEF repository from '{weights_path}'.\n\n"
+                "To resolve this issue:\n"
+                "1. Ensure you have cloned the CHIEF repository to a convenient location:\n"
+                "   `git clone https://github.com/hms-dbmi/CHIEF/`\n"
+                "2. Set the path to CHIEF repo in `trident/slide_encoder_models/load_ckpts.json`, e.g., `./CHIEF`.\n"
+                "3. Verify that CHIEF dependencies are installed:\n"
+                "   `pip install addict`\n\n"
+            )
 
-        current_wd = os.getcwd() # Get current working directory
-        os.chdir(weights_path)  # Set working directory to CHIEF repo
-        assert os.path.exists(os.path.join(weights_path, './model_weight', 'Text_emdding.pth')), f"Please copy Text_emdding.pth to {os.path.join(weights_path, './model_weight')}. Checkpoint can be downloaded from https://drive.google.com/drive/folders/1uRv9A1HuTW5m_pJoyMzdN31bE1i-tDaV"
-        assert os.path.exists(os.path.join(weights_path, './model_weight', 'CHIEF_pretraining.pth')), f"Please copy CHIEF_pretraining.pth to {os.path.join(weights_path, './model_weight')}. Checkpoint can be downloaded from https://drive.google.com/drive/folders/1uRv9A1HuTW5m_pJoyMzdN31bE1i-tDaV"
+        # Ensure weights can be loaded.
+        try:
+            current_wd = os.getcwd()  # Get current working directory
+            os.chdir(weights_path)  # Change to CHIEF repo directory
+            os.makedirs(os.path.join(weights_path, "model_weight"), exist_ok=True)
+
+            required_files = {
+                "Text_emdding.pth": "https://drive.google.com/drive/folders/1uRv9A1HuTW5m_pJoyMzdN31bE1i-tDaV",
+                "CHIEF_pretraining.pth": "https://drive.google.com/drive/folders/1uRv9A1HuTW5m_pJoyMzdN31bE1i-tDaV",
+            }
+
+            for file_name, download_link in required_files.items():
+                file_path = os.path.join(weights_path, "model_weight", file_name)
+                if not os.path.exists(file_path):
+                    raise Exception(
+                        f"\nError: Missing required file '{file_name}'.\n\n"
+                        "To resolve this issue:\n"
+                        f"1. Download the file from:\n   {download_link}\n"
+                        f"2. Copy '{file_name}' to the following directory:\n   {file_path}\n\n"
+                        "Ensure the file is correctly placed before retrying."
+                    )
+
+            print("All necessary files are present. CHIEF setup is complete!")
+
+        except Exception as e:
+            print("\nAn error occurred during CHIEF setup:")
+            traceback.print_exc()
+            raise e
+
         model = CHIEF(size_arg="small", dropout=True, n_classes=2)
 
         # Load pretrained weights
