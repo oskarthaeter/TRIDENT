@@ -1,7 +1,8 @@
 # 🔱   Trident
 
- [arXiv](https://arxiv.org/pdf/2502.06750) | [Cite](https://github.com/mahmoodlab/trident?tab=readme-ov-file#reference) | [License](https://github.com/mahmoodlab/trident?tab=License-1-ov-file)
-
+ [arXiv](https://arxiv.org/pdf/2502.06750) | [Cite](https://github.com/mahmoodlab/trident?tab=readme-ov-file#reference) | [Blog](https://www.linkedin.com/posts/azh22_announcing-new-open-source-tools-to-accelerate-activity-7295474899391766530-1T3p/?utm_source=share&utm_medium=member_desktop)
+ | [License](https://github.com/mahmoodlab/trident?tab=License-1-ov-file)
+ 
 Trident is a toolkit for large-scale whole-slide image processing.
 This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard Medical School and Brigham and Women's Hospital. This work was funded by NIH NIGMS R35GM138216.
 
