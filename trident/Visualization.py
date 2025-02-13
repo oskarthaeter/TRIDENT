@@ -77,7 +77,7 @@ def visualize_heatmap(
     Args:
         wsi: Whole slide image object.
         scores (np.ndarray): Scores associated with each coordinate.
-        coords (np.ndarray): Coordinates of patches.
+        coords (np.ndarray): Coordinates of patches at level 0.
         patch_size_level0 (int): Patch size at level 0.
         vis_level (Optional[int]): Visualization level.
         cmap (str): Colormap to use for the heatmap.
