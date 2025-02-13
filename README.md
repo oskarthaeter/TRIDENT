@@ -1,6 +1,6 @@
 # 🔱   Trident
 
- [arXiv](https://arxiv.org/pdf/2502.06750) | [Cite](https://github.com/mahmoodlab/trident?tab=readme-ov-file#reference) | [Blog](https://www.linkedin.com/posts/azh22_announcing-new-open-source-tools-to-accelerate-activity-7295474899391766530-1T3p/?utm_source=share&utm_medium=member_desktop)
+ [arXiv](https://arxiv.org/pdf/2502.06750) | [Blog](https://www.linkedin.com/pulse/announcing-new-open-source-tools-accelerate-ai-pathology-andrew-zhang-loape/?trackingId=pDkifo54SRuJ2QeGiGcXpQ%3D%3D) | [Cite](https://github.com/mahmoodlab/trident?tab=readme-ov-file#reference)
  | [License](https://github.com/mahmoodlab/trident?tab=License-1-ov-file)
  
 Trident is a toolkit for large-scale whole-slide image processing.
