@@ -4,7 +4,7 @@ import torch
 import sys; sys.path.append('../')
 
 # New imports to test 
-from trident.slide_encoder_models.load import *
+from trident.slide_encoder_models import *
 
 """
 Test the forward pass of the slide encoders.

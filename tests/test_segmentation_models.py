@@ -9,7 +9,7 @@ except:
     pass
 
 import sys; sys.path.append('../')
-from trident.segmentation_models.load import segmentation_model_factory 
+from trident.segmentation_models import segmentation_model_factory 
 
 """
 Test forward pass of the segmentation model(s).

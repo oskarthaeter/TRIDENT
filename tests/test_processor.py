@@ -2,9 +2,9 @@ import os
 import unittest
 import sys
 sys.path.append('../')
-from trident.Processor import Processor
-from trident.segmentation_models.load import segmentation_model_factory
-from trident.patch_encoder_models.load import encoder_factory
+from trident import Processor
+from trident.segmentation_models import segmentation_model_factory
+from trident.patch_encoder_models import encoder_factory
 
 from huggingface_hub import snapshot_download
 
