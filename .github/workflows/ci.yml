@@ -30,4 +30,4 @@ jobs:
 
     - name: Run tests
       run: |
-        python tests/test_openslidewsi.py
+        python tests/test_segmentation_models.py
