@@ -19,7 +19,8 @@ setup(
         'einops_exts',
         'geopandas',
         'huggingface_hub',
-        'openslide-bin'
+        'openslide-bin',
+        'scipy'
     ],
     entry_points={
         'console_scripts': [
