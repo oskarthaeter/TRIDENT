@@ -8,7 +8,7 @@ python run_batch_of_slides.py --task all --wsi_dir output/wsis --job_dir output 
 """
 
 import argparse
-from trident.Processor import Processor
+from trident import Processor
 
 
 def parse_arguments():
