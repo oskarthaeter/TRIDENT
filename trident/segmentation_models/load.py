@@ -168,7 +168,7 @@ class GrandQCSegmenter(SegmentationModel):
         return predictions
 
 
-def segmentation_model_factory(model_name, confidence_thresh, device, freeze=True):
+def segmentation_model_factory(model_name, confidence_thresh=0.5, device='cuda', freeze=True):
     '''
     Build a slide encoder based on model name.
     '''
