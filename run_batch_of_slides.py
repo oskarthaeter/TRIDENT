@@ -8,6 +8,7 @@ python run_batch_of_slides.py --task all --wsi_dir output/wsis --job_dir output 
 """
 
 import argparse
+import torch
 from trident import Processor
 
 
@@ -140,6 +141,9 @@ def run_task(processor, args):
 def main():
     args = parse_arguments()
     processor = initialize_processor(args)
+
+    # ensure cuda is available
+    args.device = f'cuda:{args.gpu}' if torch.cuda.is_available() else 'cpu'
 
     if args.task == 'all':
         args.task = 'seg'
