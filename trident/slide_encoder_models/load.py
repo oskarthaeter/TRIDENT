@@ -131,11 +131,13 @@ class ABMILSlideEncoder(BaseSlideEncoder):
         embedding_dim = input_feature_dim
         return model, precision, embedding_dim
 
-    def forward(self, batch, device='cuda'):
+    def forward(self, batch, device='cuda', return_raw_attention=False):
         image_features = self.model['pre_attention_layers'](batch['features'].to(device))
         image_features, attn = self.model['image_pooler'](image_features) # Features shape: (b n_branches f), where n_branches = 1. Branching is not used in this implementation.
         image_features = rearrange(image_features, 'b 1 f -> b f')
         image_features = self.model['post_attention_layers'](image_features)# Attention scores shape: (b r h n), where h is number of attention heads 
+        if return_raw_attention:
+            return image_features, attn
         return image_features
 
 

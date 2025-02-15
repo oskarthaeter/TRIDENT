@@ -9,7 +9,7 @@ except:
     pass
 
 import sys; sys.path.append('../')
-from trident.segmentation_models.load import segmentation_model_factory 
+from trident.segmentation_models import segmentation_model_factory 
 
 """
 Test forward pass of the segmentation model(s).
@@ -22,7 +22,8 @@ class TestSegmentationModels(unittest.TestCase):
 
     def _test_forward(self, encoder_name):
         print("\033[95m" + f"Testing {encoder_name} forward pass" + "\033[0m")
-        encoder = segmentation_model_factory(encoder_name, 'cuda:0')
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        encoder = segmentation_model_factory(encoder_name, device)
 
         self.dummy_image = np.random.randint(0, 256, (encoder.input_size, encoder.input_size, 3), dtype=np.uint8)
         self.dummy_image = Image.fromarray(self.dummy_image)

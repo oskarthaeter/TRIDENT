@@ -9,9 +9,9 @@ python run_single_slide.py --slide_path output/wsis/394140.svs --job_dir output/
 import argparse
 import os
 
-from trident.wsi_objects.WSI import OpenSlideWSI
-from trident.segmentation_models.load import segmentation_model_factory
-from trident.patch_encoder_models.load import encoder_factory
+from trident import OpenSlideWSI
+from trident.segmentation_models import segmentation_model_factory
+from trident.patch_encoder_models import encoder_factory
 
 
 def parse_arguments():

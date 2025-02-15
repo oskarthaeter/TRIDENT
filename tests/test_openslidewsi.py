@@ -3,9 +3,9 @@ import unittest
 import torch  # Check for CUDA availability
 
 import sys; sys.path.append('../')
-from trident.wsi_objects.WSI import OpenSlideWSI
-from trident.segmentation_models.load import segmentation_model_factory
-from trident.patch_encoder_models.load import encoder_factory
+from trident import OpenSlideWSI
+from trident.segmentation_models import segmentation_model_factory
+from trident.patch_encoder_models import encoder_factory
 
 from huggingface_hub import snapshot_download
 

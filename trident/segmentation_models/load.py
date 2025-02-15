@@ -50,7 +50,7 @@ class HESTSegmenter(SegmentationModel):
                 raise Exception("Please install huggingface_hub (`pip install huggingface_hub`) to use this model")
             snapshot_download(repo_id="MahmoodLab/hest-tissue-seg", repo_type='model', local_dir=checkpoint_dir, cache_dir=checkpoint_dir)
 
-        checkpoint = torch.load(os.path.join(checkpoint_dir, 'deeplabv3_seg_v4.ckpt'), map_location=device, weights_only=False)
+        checkpoint = torch.load(os.path.join(checkpoint_dir, 'deeplabv3_seg_v4.ckpt'), map_location=torch.device('cpu'), weights_only=False)
             
         clean_state_dict = {}
         for key in checkpoint['state_dict']:

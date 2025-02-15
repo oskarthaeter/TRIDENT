@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='trident',
-    version='0.0.1',
+    version='0.0.2',
     packages=find_packages(),
     install_requires=[
         'ipywidgets',
@@ -19,7 +19,8 @@ setup(
         'einops_exts',
         'geopandas',
         'huggingface_hub',
-        'openslide-bin'
+        'openslide-bin',
+        'scipy'
     ],
     entry_points={
         'console_scripts': [
