@@ -30,7 +30,11 @@ def parse_arguments():
     parser.add_argument("--mag", type=int, choices=[5, 10, 20, 40], default=20,
                         help="Magnification at which patches/features are extracted")
     parser.add_argument("--patch_size", type=int, default=256, help="Patch size at which coords/features are extracted")
-    parser.add_argument("--fast_seg", action="store_true", default=False, help="Run segmentation at 5x (faster) or 10x (default)")
+    parser.add_argument('--segmenter', type=str, default='hest', 
+                        choices=['hest', 'grandqc',], 
+                        help='Type of tissue vs background segmenter. Options are HEST or GrandQC.')
+    parser.add_argument('--seg_conf_thresh', type=float, default=0.5, 
+                    help='Confidence threshold to apply to binarize segmentation predictions. Lower this threhsold to retain more tissue. Defaults to 0.5. Try 0.4 as 2nd option.')
     parser.add_argument('--custom_mpp_keys', type=str, nargs='+', default=None,
                     help='Custom keys used to store the resolution as MPP (micron per pixel) in your list of whole-slide image.')
     parser.add_argument('--overlap', type=int, default=0, 
@@ -49,10 +53,14 @@ def process_slide(args):
 
     # Step 1: Tissue Segmentation
     print("Running tissue segmentation...")
-    segmentation_model = segmentation_model_factory("hest", device=f"cuda:{args.gpu}")
+    segmentation_model = segmentation_model_factory(
+        model_name=args.segmenter,
+        confidence_thresh=args.seg_conf_thresh,
+        device=f"cuda:{args.gpu}"
+    )
     slide.segment_tissue(
         segmentation_model=segmentation_model,
-        target_mag=5 if args.fast_seg else 10,
+        target_mag=segmentation_model.target_mag,
         job_dir=args.job_dir
     )
     print(f"Tissue segmentation completed. Results saved to {args.job_dir}contours_geojson and {args.job_dir}contours")
