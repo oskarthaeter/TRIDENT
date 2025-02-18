@@ -9,17 +9,19 @@ This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard M
 > [!NOTE]
 > Contributions are welcome! Please report any issues. You may also contribute by opening a pull request.
 
-## Key Features:
+### Key Features:
 
 <img align="right" src="_readme/trident_crop.jpg" width="250px" />
 
-- **Tissue Segmentation**: Extract tissue from background using a DeepLabv3 model (supports H&E, IHC, penmark and artifact removal, etc.).
+- **Tissue Segmentation**: Extract tissue from background (supports H&E, IHC, penmark and artifact removal, etc.).
 - **Patch Extraction**: Extract tissue patches of any size and magnification.
-- **Patch Feature Extraction**: Extract patch embeddings from tissue patches using 20 popular foundation models, including [UNI](https://www.nature.com/articles/s41591-024-02857-3), [CONCH](https://www.nature.com/articles/s41591-024-02856-4), [Virchow](https://www.nature.com/articles/s41591-024-03141-0), [H-Optimus-0](https://github.com/bioptimus/releases/tree/main/models/h-optimus/v0) and many more...
-- **Slide Feature Extraction**: Extract slide embeddings from pre-extracted patch embeddings using 5 whole-slide foundation models, including [Threads](https://arxiv.org/abs/2501.16652) (coming soon!), [Titan](https://arxiv.org/abs/2411.19666), 
-[PRISM](https://arxiv.org/abs/2405.10254), [GigaPath](https://www.nature.com/articles/s41586-024-07441-w) and [CHIEF](https://www.nature.com/articles/s41586-024-07894-z). 
+- **Patch Feature Extraction**: Extract patch embeddings using one of 20  foundation models, including [UNI](https://www.nature.com/articles/s41591-024-02857-3), [CONCH](https://www.nature.com/articles/s41591-024-02856-4), [Virchow](https://www.nature.com/articles/s41591-024-03141-0), [H-Optimus-0](https://github.com/bioptimus/releases/tree/main/models/h-optimus/v0) and more...
+- **Slide Feature Extraction**: Extract slide embeddings using one of 6 slide foundation models, including [Threads](https://arxiv.org/abs/2501.16652) (coming soon!), [Titan](https://arxiv.org/abs/2411.19666), and [GigaPath](https://www.nature.com/articles/s41586-024-07441-w). 
 
-## Getting Started:
+### Updates:
+- 02.25: Image converter from `czi`, `png`, etc to `tiff`.
+- 02.25: Support for [GrandQC](https://www.nature.com/articles/s41467-024-54769-y) tissue vs. background segmentation.
+- 02.25: Support for [Madeleine](https://github.com/mahmoodlab/MADELEINE/tree/main), [Hibou](https://github.com/HistAI/hibou), [Lunit](https://huggingface.co/1aurent/vit_small_patch8_224.lunit_dino) and [Kaiko](https://huggingface.co/histai/hibou-L) models.
 
 ### 🔨 1. **Installation**:
 - Create an environment: `conda create -n "trident" python=3.10`, and activate it `conda activate trident`.
@@ -28,13 +30,11 @@ This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard M
     - Local install with running `pip install -e .`.
 - **Install with pip**:
     - `pip install git+https://github.com/mahmoodlab/trident.git `
-- Additional packages may be required if you are loading specific pretrained models. Follow error messages for additional instructions.
+- Additional packages may be required for loading some pretrained models. Follow error messages for instructions.
 
 ### 🔨 2. **Running Trident**:
 
-**Already familiar with WSI processing?**
-
-Want patch embeddings? Perform segmentation, patching, and UNI feature extraction for a directory of WSIs in a single command:
+**Already familiar with WSI processing?** Interested in patch embeddings? Perform segmentation, patching, and UNI feature extraction for a directory of WSIs in a single command:
 
 ```
 python run_batch_of_slides.py --task all --wsi_dir wsis --job_dir ./trident_processed --patch_encoder uni_v1 --mag 20 --patch_size 256
@@ -87,7 +87,7 @@ python run_single_slide.py --slide_path wsis/xxxx.svs --job_dir ./trident_proces
    - `--task feat`: Specifies that you want to do feature extraction.
    - `--wsi_dir wsis`: Path to the directory containing WSIs.
    - `--job_dir ./trident_processed`: Output directory for processed results.
-   - `--patch_encoder uni_v1`: Uses the `UNIv1` patch encoder. Could also be `conch_v1`, `ctranspath`, `gigapath`, `virchow`, `hoptimus0`, etc. See below for list of supported models. 
+   - `--patch_encoder uni_v1`: Uses the `UNIv1` patch encoder. See below for list of supported models. 
    - `--mag 20`: Features are extracted from patches at 20x magnification.
    - `--patch_size 256`: Patches are 256x256 pixels in size.
  - **Outputs**: 
@@ -120,7 +120,7 @@ Trident supports 20 patch encoders, loaded via a patch-level [`encoder_factory`]
    - `--task feat`: Specifies that you want to do feature extraction.
    - `--wsi_dir wsis`: Path to the directory containing WSIs.
    - `--job_dir ./trident_processed`: Output directory for processed results.
-   - `--slide_encoder titan`: Uses the `Titan` slide encoder. Could also be `prism`, `gigapath`, `chief`, and `threads` (coming soon!). 
+   - `--slide_encoder titan`: Uses the `Titan` slide encoder. See below for supported models.
    - `--mag 20`: Features are extracted from patches at 20x magnification.
    - `--patch_size 512`: Patches are 512x512 pixels in size.
  - **Outputs**: 
@@ -139,7 +139,7 @@ Trident supports 5 slide encoders, loaded via a slide-level [`encoder_factory`](
 
 Please see our [tutorials](https://github.com/mahmoodlab/trident/tree/main/tutorials) for more cool things you can do with Trident and a more [detailed readme](https://github.com/mahmoodlab/trident/blob/main/DETAILS.md) for additional features.
 
-## 🙋 FAQ
+### 🙋 FAQ
 - **Q**: How do I extract patch embeddings from legacy patch coordinates extracted with [CLAM](https://github.com/mahmoodlab/CLAM)?
    - **A**:
       ```bash
