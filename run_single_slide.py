@@ -22,11 +22,13 @@ def parse_arguments():
     parser.add_argument("--gpu", type=int, default=0, help="GPU index to use for processing tasks")
     parser.add_argument("--slide_path", type=str, required=True, help="Path to the WSI file to process")
     parser.add_argument("--job_dir", type=str, required=True, help="Directory to store outputs")
-    parser.add_argument("--patch_encoder", type=str, default="uni_v1",
-                        choices=["conch_v1", "uni_v1", "uni_v2", "ctranspath", "phikon",
-                                 "resnet50", "gigapath", "virchow", "virchow2",
-                                 "hoptimus0", "phikon_v2", "conch_v15", "musk"],
-                        help="Patch encoder for feature extraction")
+    parser.add_argument('--patch_encoder', type=str, default='conch_v15', 
+                        choices=['conch_v1', 'uni_v1', 'uni_v2', 'ctranspath', 'phikon', 
+                                 'resnet50', 'gigapath', 'virchow', 'virchow2', 
+                                 'hoptimus0', 'phikon_v2', 'conch_v15', 'musk', 'hibou_l',
+                                 'kaiko-vits8', 'kaiko-vits16', 'kaiko-vitb8', 'kaiko-vitb16',
+                                 'kaiko-vitl14', 'lunit-vits8'],
+                        help='Patch encoder to use')
     parser.add_argument("--mag", type=int, choices=[5, 10, 20, 40], default=20,
                         help="Magnification at which patches/features are extracted")
     parser.add_argument("--patch_size", type=int, default=256, help="Patch size at which coords/features are extracted")
