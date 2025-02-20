@@ -80,13 +80,10 @@ class AnyToTiffConverter:
                 from valis_hest.slide_io import BioFormatsSlideReader
             except ImportError:
                 raise ImportError("Install valis_hest with `pip install valis_hest` and JVM with `sudo apt-get install maven`.")
-
             reader = BioFormatsSlideReader(file_path) 
             reader.create_metadata()
             img = reader.slide2image(level=int(1/zoom)-1)  # @TODO: Assumes each level 2x small than the higher one.
-
             return img
-
         else:
             with Image.open(file_path) as img:
                 new_size = (int(img.width * zoom), int(img.height * zoom))
@@ -122,21 +119,21 @@ class AnyToTiffConverter:
         save_path = os.path.join(self.job_dir, f"{img_name}.tiff")
         try:
             import pyvips
-            pyvips_img = pyvips.Image.new_from_array(img)
-            pyvips_img.tiffsave(
-                save_path,
-                bigtiff=self.bigtiff,
-                pyramid=True,
-                tile=True,
-                tile_width=256,
-                tile_height=256,
-                compression='jpeg',
-                resunit=pyvips.enums.ForeignTiffResunit.CM,
-                xres=1. / (mpp * 1e-4),
-                yres=1. / (mpp * 1e-4)
-            )
         except ImportError:
             raise ImportError("pyvips is required for saving pyramidal TIFFs. Install it with pip install pyvips.")
+        pyvips_img = pyvips.Image.new_from_array(img)
+        pyvips_img.tiffsave(
+            save_path,
+            bigtiff=self.bigtiff,
+            pyramid=True,
+            tile=True,
+            tile_width=256,
+            tile_height=256,
+            compression='jpeg',
+            resunit=pyvips.enums.ForeignTiffResunit.CM,
+            xres=1. / (mpp * 1e-4),
+            yres=1. / (mpp * 1e-4)
+        )
 
     def process_all(self, input_dir: str, mpp_csv: str, downscale_by: int = 1) -> None:
         """
