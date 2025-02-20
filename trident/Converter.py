@@ -6,6 +6,20 @@ from tqdm import tqdm
 
 Image.MAX_IMAGE_PIXELS = None
 
+# Bioformats
+BIOFORMAT_EXTENSIONS = {
+    '.tif', '.tiff', '.ndpi', '.svs', '.lif', '.ims', '.vsi', '.bif', '.btf',
+    '.mrxs', '.scn', '.ome.tiff', '.ome.tif', '.h5', '.hdf', '.hdf5', '.he5',
+    '.dicom', '.dcm', '.ome.xml', '.zvi', '.pcoraw', '.jp2', '.qptiff', '.nrrd', '.ome.btf', '.fg7'
+}
+
+# PIL
+PIL_EXTENSIONS = {'.png', '.jpg', '.jpeg'}
+
+# Combined with CZI 
+SUPPORTED_EXTENSIONS = BIOFORMAT_EXTENSIONS | PIL_EXTENSIONS | {'.czi'}
+
+
 
 class AnyToTiffConverter:
     """
@@ -61,6 +75,15 @@ class AnyToTiffConverter:
                 raise ImportError("pylibCZIrw is required for CZI files. Install it with pip install pylibCZIrw.")
             with pyczi.open_czi(file_path) as czidoc:
                 return czidoc.read(zoom=zoom)
+        if file_path.lower().endswith(tuple(BIOFORMAT_EXTENSIONS)):
+            try:
+                from valis_hest.slide_io import BioFormatsSlideReader
+            except ImportError:
+                raise ImportError("Install valis_hest with `pip install valis_hest` and JVM with `sudo apt-get install maven`.")
+            reader = BioFormatsSlideReader(file_path) 
+            reader.create_metadata()
+            img = reader.slide2image(level=int(1/zoom)-1)  # @TODO: Assumes each level 2x small than the higher one.
+            return img
         else:
             with Image.open(file_path) as img:
                 new_size = (int(img.width * zoom), int(img.height * zoom))
@@ -96,21 +119,21 @@ class AnyToTiffConverter:
         save_path = os.path.join(self.job_dir, f"{img_name}.tiff")
         try:
             import pyvips
-            pyvips_img = pyvips.Image.new_from_array(img)
-            pyvips_img.tiffsave(
-                save_path,
-                bigtiff=self.bigtiff,
-                pyramid=True,
-                tile=True,
-                tile_width=256,
-                tile_height=256,
-                compression='jpeg',
-                resunit=pyvips.enums.ForeignTiffResunit.CM,
-                xres=1. / (mpp * 1e-4),
-                yres=1. / (mpp * 1e-4)
-            )
         except ImportError:
             raise ImportError("pyvips is required for saving pyramidal TIFFs. Install it with pip install pyvips.")
+        pyvips_img = pyvips.Image.new_from_array(img)
+        pyvips_img.tiffsave(
+            save_path,
+            bigtiff=self.bigtiff,
+            pyramid=True,
+            tile=True,
+            tile_width=256,
+            tile_height=256,
+            compression='jpeg',
+            resunit=pyvips.enums.ForeignTiffResunit.CM,
+            xres=1. / (mpp * 1e-4),
+            yres=1. / (mpp * 1e-4)
+        )
 
     def process_all(self, input_dir: str, mpp_csv: str, downscale_by: int = 1) -> None:
         """
@@ -121,7 +144,7 @@ class AnyToTiffConverter:
             mpp_csv (str): Path to a CSV file with 2 field: "wsi" with fnames with extensions and "mpp" with the micron per pixel values.
             downscale_by (int): Factor to downscale images by, e.g., to save a 40x image into a 20x one, set downscale_by to 2. 
         """
-        files = [f for f in os.listdir(input_dir) if f.lower().endswith(('.czi', '.tif', '.tiff', '.png', '.jpg', '.jpeg'))]
+        files = [f for f in os.listdir(input_dir) if f.lower().endswith(tuple(SUPPORTED_EXTENSIONS))]
         mpp_df = pd.read_csv(mpp_csv)
         for filename in tqdm(files, desc="Processing images"):
             img_path = os.path.join(input_dir, filename)
@@ -134,6 +157,13 @@ class AnyToTiffConverter:
             tqdm.write(f"Processing {filename} | Size: {size}")
             self.process_file(img_path, mpp, zoom=1/downscale_by)
 
+        #clean up 
+        try:
+            from valis_hest import slide_io
+            slide_io.kill_jvm() 
+        except:
+            pass
+
 
 if __name__ == "__main__":
 
@@ -141,4 +171,10 @@ if __name__ == "__main__":
     converter = AnyToTiffConverter(job_dir='./pyramidal_tiff', bigtiff=False)
 
     # Convert all images in the dir "../pngs" with mpp specified in to_process.csv. TIFF are saved at the original pixel res.
-    converter.process_all(input_dir='../pngs', mpp_csv='../pngs/to_process.csv', downscale_by=1)
+    converter.process_all(input_dir='../wsis/', mpp_csv='../pngs/to_process.csv', downscale_by=1)
+
+    # Example of to_process.csv specifying the mpp of all WSIs in the dir "../wsis"
+    # wsi,mpp
+    # 3756144.svs,0.25
+    # 4290019.svs,0.25
+    # 619709.svs,0.25
