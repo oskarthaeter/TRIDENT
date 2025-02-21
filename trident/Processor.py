@@ -626,11 +626,13 @@ class Processor:
         os.makedirs(os.path.join(self.job_dir, saveto), exist_ok=True)
 
         # Run patch feature extraction if some patch features are missing:
-        num_patch_features = 0
+        already_processed = []
         if os.path.isdir(os.path.join(self.job_dir, patch_features_dir)):
-            num_patch_features = len([x for x in os.listdir(os.path.join(self.job_dir, patch_features_dir)) if x.endswith(saveas)])
-        if num_patch_features < len(self.wsis):
-            print(f"Some patch features haven't been extracted in {num_patch_features}/{len(self.wsis)} WSIs. Starting extraction.")
+            already_processed = [os.path.splitext(x)[0] for x in os.listdir(os.path.join(self.job_dir, patch_features_dir)) if x.endswith(saveas)]
+            wsi_names = [slide.name for slide in self.wsis]
+            already_processed = [x for x in already_processed if x in wsi_names]
+        if len(already_processed) < len(self.wsis):
+            print(f"Some patch features haven't been extracted in {len(already_processed)}/{len(self.wsis)} WSIs. Starting extraction.")
             from trident.patch_encoder_models.load import encoder_factory
             patch_encoder = encoder_factory(slide_to_patch_encoder_name[slide_encoder.enc_name])
             self.run_patch_feature_extraction_job(
