@@ -342,7 +342,7 @@ class ResNet50InferenceEncoder(BasePatchEncoder):
         self.enc_name = 'resnet50'
         model = timm.create_model("resnet50.tv_in1k", pretrained=pretrained, **timm_kwargs)
         mean, std = get_constants('imagenet')
-        eval_transform = get_eval_transforms(mean, std, target_img_size=image_size, interpolation=InterpolationMode.BILINEAR, max_size=None, antialias=True)
+        eval_transform = get_eval_transforms(mean, std, target_img_size=image_size, center_crop = True, interpolation=InterpolationMode.BILINEAR, max_size=None, antialias=True)
 
         precision = torch.float32
         if pool:
