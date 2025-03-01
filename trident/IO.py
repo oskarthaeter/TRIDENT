@@ -709,7 +709,13 @@ def get_num_workers(batch_size: int,
     - The number of workers is clipped to a minimum of 1 to ensure multiprocessing is not disabled.
     - The maximum number of workers defaults to `2 * batch_size` unless explicitly specified.
     - The function ensures compatibility with systems where `os.cpu_count()` may return `None`.
+    - On Windows systems, the number of workers is always set to 0 to ensure compatibility with PyTorch datasets whose attributes may not be serializable.
     """
+
+    # Disable pytorch multiprocessing on Windows
+    if os.name == 'nt':
+        return 0
+    
     num_cores = os.cpu_count() or fallback
     num_workers = int(factor * num_cores)  # Use a fraction of available cores
     max_workers = max_workers or (2 * batch_size)  # Optional cap
