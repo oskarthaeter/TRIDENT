@@ -27,7 +27,7 @@ def encoder_factory(model_name, pretrained=True, freeze=True, **kwargs):
 
         if model_name.startswith('mean-'):
             enc = MeanSlideEncoder
-            return enc(model_name = model_name, pretrained = pretrained, freeze = freeze, **kwargs)
+            return enc(model_name = model_name)
         elif 'threads' in model_name:
             # raise ValueError(f"threads is not public. Coming soon!")
             enc = ThreadsSlideEncoder
