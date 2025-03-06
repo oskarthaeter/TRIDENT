@@ -8,10 +8,10 @@ from trident.Processor import Processor
 from trident.Converter import AnyToTiffConverter
 
 __all__ = [
-    OpenSlideWSI, 
-    OpenSlideWSIPatcher,
-    WSIPatcherDataset,
-    visualize_heatmap,
-    Processor,
-    AnyToTiffConverter
+    "OpenSlideWSI", 
+    "OpenSlideWSIPatcher",
+    "WSIPatcherDataset",
+    "visualize_heatmap",
+    "Processor",
+    "AnyToTiffConverter"
 ]
