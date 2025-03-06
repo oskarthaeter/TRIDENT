@@ -8,6 +8,7 @@ from trident.slide_encoder_models.load import (
     GigaPathSlideEncoder,
     TitanSlideEncoder,
     ThreadsSlideEncoder,
+    MadeleineSlideEncoder,
 )
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "GigaPathSlideEncoder",
     "TitanSlideEncoder",
     "ThreadsSlideEncoder",
+    "MadeleineSlideEncoder",
 ]
