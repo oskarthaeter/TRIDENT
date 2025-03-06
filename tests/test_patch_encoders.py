@@ -8,7 +8,7 @@ except:
     pass
 
 import sys; sys.path.append('../')
-from trident.patch_encoder_models import encoder_factory 
+from trident.patch_encoder_models import * 
 
 """
 Test forward pass of patch encoders
