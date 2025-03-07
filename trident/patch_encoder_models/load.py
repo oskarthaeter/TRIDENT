@@ -581,8 +581,7 @@ class HOptimus1InferenceEncoder(BasePatchEncoder):
         from torchvision import transforms
 
         self.enc_name = 'hoptimus1'
-
-        model = timm.create_model("hf-hub:bioptimus/H-optimus-1", pretrained=True **timm_kwargs)
+        model = timm.create_model("hf-hub:bioptimus/H-optimus-1", pretrained=True, **timm_kwargs)
 
         eval_transform = transforms.Compose([
             transforms.Resize(224),  
