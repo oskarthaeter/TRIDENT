@@ -467,7 +467,7 @@ class OpenSlideWSI:
 
         mpp_reduction_factor = self.mpp / destination_mpp
         width, height = self.get_dimensions()
-        width, height = int(width * mpp_reduction_factor), int(height * mpp_reduction_factor)
+        width, height = int(round(width * mpp_reduction_factor)), int(round(height * mpp_reduction_factor))
         predicted_mask = np.zeros((height, width), dtype=np.uint8)
 
         for imgs, (xcoords, ycoords) in dataloader:
@@ -476,14 +476,16 @@ class OpenSlideWSI:
             with torch.autocast(device_type=device.split(":")[0], dtype=precision, enabled=(precision != torch.float32)):
                 preds = segmentation_model(imgs).cpu().numpy()
 
-            x_starts = np.round(xcoords.numpy() * mpp_reduction_factor).astype(int)
-            y_starts = np.round(ycoords.numpy() * mpp_reduction_factor).astype(int)
+            x_starts = np.clip(np.round(xcoords.numpy() * mpp_reduction_factor).astype(int), 0, width - 1) # clip for starts
+            y_starts = np.clip(np.round(ycoords.numpy() * mpp_reduction_factor).astype(int), 0, height - 1)
             x_ends = np.clip(x_starts + segmentation_model.input_size, 0, width)
             y_ends = np.clip(y_starts + segmentation_model.input_size, 0, height)
             
             for i in range(len(preds)):
                 x_start, x_end = x_starts[i], x_ends[i]
                 y_start, y_end = y_starts[i], y_ends[i]
+                if x_start >= x_end or y_start >= y_end: # invalid patch
+                    continue
                 patch_pred = preds[i][:y_end - y_start, :x_end - x_start]
                 predicted_mask[y_start:y_end, x_start:x_end] += patch_pred
         
@@ -491,10 +493,10 @@ class OpenSlideWSI:
         predicted_mask = (predicted_mask > 0).astype(np.uint8) * 255
 
         # Fill holes if desired
-        # if not holes_are_tissue:
-        holes, _ = cv2.findContours(predicted_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-        for hole in holes:
-            cv2.drawContours(predicted_mask, [hole], 0, 255, -1)
+        if not holes_are_tissue:
+            holes, _ = cv2.findContours(predicted_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+            for hole in holes:
+                cv2.drawContours(predicted_mask, [hole], 0, 255, -1)
 
         # Save thumbnail image
         thumbnail_saveto = os.path.join(job_dir, 'thumbnails', f'{self.name}.jpg')
