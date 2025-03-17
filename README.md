@@ -30,7 +30,7 @@ This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard M
     - Local install with running `pip install -e .`.
 - **Install with pip**:
     - `pip install git+https://github.com/mahmoodlab/trident.git `
-- Additional packages may be required for loading some pretrained models. Follow error messages for instructions.
+- Additional packages may be required to load some pretrained models. Follow error messages for instructions.
 
 ### 🔨 2. **Running Trident**:
 
@@ -130,7 +130,7 @@ Trident supports 21 patch encoders, loaded via a patch-level [`encoder_factory`]
 Trident supports 5 slide encoders, loaded via a slide-level [`encoder_factory`](https://github.com/mahmoodlab/trident/blob/main/trident/slide_encoder_models/load.py#L14). Models requiring specific installations will return error messages with additional instructions. Gated models on HuggingFace require access requests.
 - **Threads**: Coming Soon! [MahmoodLab/threads](https://huggingface.co/MahmoodLab/threads) (`--slide_encoder threads`). Based on `conch_v15` with `512x512` @20x.
 - **Titan**: [MahmoodLab/TITAN](https://huggingface.co/MahmoodLab/TITAN) (`--slide_encoder titan`). Based on `conch_v15` with `512x512` @20x.
-- **PRISM**: [paige-ai/Prism](https://huggingface.co/paige-ai/Prism) (`--slide_encoder prism`). Based on `virchow` with `256x256` @20x.
+- **PRISM**: [paige-ai/Prism](https://huggingface.co/paige-ai/Prism) (`--slide_encoder prism`). Based on `virchow` with `224x224` @20x.
 - **CHIEF**: [CHIEF](https://github.com/hms-dbmi/CHIEF) (`--slide_encoder chief`). Based on `ctranspath` with `256x256` @10x.
 - **GigaPath**: [prov-gigapath](https://huggingface.co/prov-gigapath/prov-gigapath)  (`--slide_encoder gigapath`). Based on `gigapath` with `256x256x` @20x.
 - **Madeleine**: [MahmoodLab/madeleine](https://huggingface.co/MahmoodLab/madeleine) (`--slide_encoder madeleine`). Based on `conch_v1` with `256x256` @10x.
