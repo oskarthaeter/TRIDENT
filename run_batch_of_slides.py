@@ -295,4 +295,7 @@ def main():
 
 
 if __name__ == "__main__":
+    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench/ --gpu 0 --segmenter grandqc
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench --mag 20 --patch_size 512
+    # python run_batch_of_slides.py --task feat --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench --patch_encoder uni_v1 --coords_dir /mnt/patho-bench/20x_512px_0px_overlap --batch_size 256
     main()
