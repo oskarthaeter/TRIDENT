@@ -4,3 +4,6 @@ main
 *.ckpt
 .env
 *.bin
+*.pth
+.cache
+*.out

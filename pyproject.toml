@@ -28,6 +28,7 @@ geopandas = "*"
 huggingface_hub = "*"
 openslide-bin = "*"
 scipy = "*"
+tifffile = "*"
 
 [tool.poetry.dev-dependencies]
 # Optional development dependencies 
