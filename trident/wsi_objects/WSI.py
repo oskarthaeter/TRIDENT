@@ -18,6 +18,7 @@ from trident.IO import (
     overlay_gdf_on_thumbnail,
     get_num_workers,
 )
+from trident.wsi_objects.entropy_adaptor import save_entropy_patches
 
 
 class OpenSlideWSI:
@@ -634,6 +635,7 @@ class OpenSlideWSI:
         save_coords: str,
         overlap: int = 0,
         min_tissue_proportion: float = 0.0,
+        export_entropy_format: bool = False,
     ) -> str:
         """
         The `extract_tissue_coords` function of the class `OpenSlideWSI` extracts patch coordinates
@@ -691,14 +693,20 @@ class OpenSlideWSI:
             "overlap": overlap,
             "name": self.name,
             "savetodir": save_coords,
-            "extraction_level": patcher.level,
         }
 
         # Save the assets and attributes to an hdf5 file
         os.makedirs(os.path.join(save_coords, "patches"), exist_ok=True)
         out_fname = os.path.join(save_coords, "patches", str(self.name) + "_patches.h5")
-        save_h5(out_fname, assets=assets, attributes={"coords": attributes}, mode="w")
-
+        # convert to entropy format, then save
+        if export_entropy_format:
+            save_entropy_patches(
+                self.slide_path, out_fname, assets, attributes, patcher.level
+            )
+        else:
+            save_h5(
+                out_fname, assets=assets, attributes={"coords": attributes}, mode="w"
+            )
         return out_fname
 
     def visualize_coords(self, coords_path: str, save_patch_viz: str) -> str:
