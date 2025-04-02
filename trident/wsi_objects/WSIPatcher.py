@@ -36,10 +36,10 @@ class OpenSlideWSIPatcher:
             dst_mag (int, optional): target magnification of the slide after rescaling. Defaults to None.
             overlap (int, optional): Overlap between patches in pixels. Defaults to 0.
             mask (gpd.GeoDataFrame, optional): geopandas dataframe of Polygons. Defaults to None.
-            coords_only (bool, optional): whenever to extract only the coordinates insteaf of coordinates + tile. Default to False.
+            coords_only (bool, optional): whether to extract only the coordinates instead of coordinates + tile. Default to False.
             threshold (float, optional): minimum proportion of the patch under tissue to be kept.
                 This argument is ignored if mask=None, passing threshold=0 will be faster. Defaults to 0.15
-            pil (bool, optional): whenever to get patches as `PIL.Image` (numpy array by default). Defaults to False
+            pil (bool, optional): whether to get patches as `PIL.Image` (numpy array by default). Defaults to False
         """
         self.wsi = wsi
         self.overlap = overlap

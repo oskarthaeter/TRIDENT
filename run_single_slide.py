@@ -100,6 +100,12 @@ def parse_arguments():
         default=0,
         help="Absolute overlap for patching in pixels. Defaults to 0. ",
     )
+    parser.add_argument(
+        "--export_entropy_format",
+        action="store_true",
+        default=False,
+        help="Whether to adjust coords so that tile-aligned dataloader can be used for patch extraction.",
+    )
     return parser.parse_args()
 
 
@@ -139,7 +145,10 @@ def process_slide(args):
     )
 
     coords_path = slide.extract_tissue_coords(
-        target_mag=args.mag, patch_size=args.patch_size, save_coords=save_coords
+        target_mag=args.mag,
+        patch_size=args.patch_size,
+        save_coords=save_coords,
+        export_entropy_format=args.export_entropy_format,
     )
     print(f"Tissue coordinates extracted and saved to {coords_path}.")
 

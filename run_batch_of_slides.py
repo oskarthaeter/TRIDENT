@@ -125,6 +125,12 @@ def parse_arguments():
         help="Minimum proportion of the patch under tissue to be kept. Between 0. and 1.0. Defaults to 0. ",
     )
     parser.add_argument(
+        "--export_entropy_format",
+        action="store_true",
+        default=False,
+        help="Whether to adjust coords so that tile-aligned dataloader can be used for patch extraction.",
+    )
+    parser.add_argument(
         "--coords_dir",
         type=str,
         default=None,
@@ -242,6 +248,7 @@ def run_task(processor, args):
             overlap=args.overlap,
             saveto=args.coords_dir,
             min_tissue_proportion=args.min_tissue_proportion,
+            export_entropy_format=args.export_entropy_format,
         )
     elif args.task == "feat":
         if args.slide_encoder is None:  # Run patch encoder:
@@ -296,6 +303,6 @@ def main():
 
 if __name__ == "__main__":
     # python run_batch_of_slides.py --task seg --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench/ --gpu 0 --segmenter grandqc
-    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench --mag 20 --patch_size 512
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench --mag 20 --patch_size 512 --export_entropy_format
     # python run_batch_of_slides.py --task feat --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench --patch_encoder uni_v1 --coords_dir /mnt/patho-bench/20x_512px_0px_overlap --batch_size 256
     main()
