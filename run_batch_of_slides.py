@@ -83,6 +83,7 @@ def parse_arguments():
         choices=[
             "hest",
             "grandqc",
+            "entropy",
         ],
         help="Type of tissue vs background segmenter. Options are HEST or GrandQC.",
     )
@@ -229,16 +230,25 @@ def run_task(processor, args):
         # python run_batch_of_slides.py --task seg --wsi_dir wsis --job_dir trident_processed --gpu 0
         from trident.segmentation_models.load import segmentation_model_factory
 
-        segmentation_model = segmentation_model_factory(
-            args.segmenter,
-            confidence_thresh=args.seg_conf_thresh,
-            device=f"cuda:{args.gpu}",
-        )
-        processor.run_segmentation_job(
-            segmentation_model,
-            seg_mag=segmentation_model.target_mag,
-            holes_are_tissue=not args.remove_holes,
-        )
+        if args.segmenter != "entropy":
+            segmentation_model = segmentation_model_factory(
+                args.segmenter,
+                confidence_thresh=args.seg_conf_thresh,
+                device=f"cuda:{args.gpu}",
+            )
+            processor.run_segmentation_job(
+                segmentation_model,
+                seg_mag=segmentation_model.target_mag,
+                holes_are_tissue=not args.remove_holes,
+            )
+        else:
+            segmentation_model = None
+            processor.run_segmentation_job(
+                segmentation_model,
+                seg_mag=args.mag,
+                holes_are_tissue=not args.remove_holes,
+            )
+
     elif args.task == "coords":
         # Minimal example for tissue patching:
         # python run_batch_of_slides.py --task coords --wsi_dir wsis --job_dir trident_processed --mag 20 --patch_size 256
@@ -302,7 +312,11 @@ def main():
 
 
 if __name__ == "__main__":
-    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench/ --gpu 0 --segmenter grandqc
+    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench/IMP_CRC --gpu 0 --segmenter entropy --mag 5
+    # 1:45:40
+    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench/IMP_CRC/grandqc --gpu 0 --segmenter grandqc
+
     # python run_batch_of_slides.py --task coords --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench --mag 20 --patch_size 512 --export_entropy_format
     # python run_batch_of_slides.py --task feat --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench --patch_encoder uni_v1 --coords_dir /mnt/patho-bench/20x_512px_0px_overlap --batch_size 256
+    # python run_single_slide.py --slide_path /mnt/IMP_CRC/CRS1/slides/CRC_0777.svs --job_dir /mnt/patho-bench/testing/grandqc --mag 20 --patch_size 256 --segmenter grandqc
     main()

@@ -6,6 +6,7 @@ import shutil
 from typing import Optional, List, Dict, Any
 from inspect import signature
 import geopandas as gpd
+import torch
 
 from trident.IO import create_lock, remove_lock, is_locked, update_log
 from trident.wsi_objects.WSI import OpenSlideWSI
@@ -253,7 +254,7 @@ class Processor:
 
     def run_segmentation_job(
         self,
-        segmentation_model: torch.nn.Module,
+        segmentation_model: torch.nn.Module | None,
         seg_mag: int = 10,
         holes_are_tissue: bool = False,
         batch_size: int = 16,
@@ -344,13 +345,20 @@ class Processor:
                 )
 
                 # call a function from WSI object to do the work
-                gdf_saveto = wsi.segment_tissue(
-                    segmentation_model=segmentation_model,
-                    target_mag=seg_mag,
-                    holes_are_tissue=holes_are_tissue,
-                    job_dir=self.job_dir,
-                    batch_size=batch_size,
-                )
+                if segmentation_model is None:
+                    gdf_saveto = wsi.segment_tissue_alternative(
+                        target_mag=seg_mag,
+                        holes_are_tissue=holes_are_tissue,
+                        job_dir=self.job_dir,
+                    )
+                else:
+                    gdf_saveto = wsi.segment_tissue(
+                        segmentation_model=segmentation_model,
+                        target_mag=seg_mag,
+                        holes_are_tissue=holes_are_tissue,
+                        job_dir=self.job_dir,
+                        batch_size=batch_size,
+                    )
 
                 remove_lock(os.path.join(saveto, f"{wsi.name}.jpg"))
 

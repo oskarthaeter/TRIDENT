@@ -7,6 +7,10 @@ import warnings
 import torch
 from typing import List, Tuple, Optional
 from torch.utils.data import DataLoader
+from skimage.filters import threshold_otsu
+from skimage.transform import resize
+from skimage.color import rgb2hsv
+import PIL.Image
 
 from trident.wsi_objects.WSIPatcher import *
 from trident.wsi_objects.WSIPatcherDataset import WSIPatcherDataset
@@ -19,6 +23,8 @@ from trident.IO import (
     get_num_workers,
 )
 from trident.wsi_objects.entropy_adaptor import save_entropy_patches
+from trident.wsi_objects.entropy_segmentation import entropy_mask
+from trident.wsi_objects.utils import extract_tile_size
 
 
 class OpenSlideWSI:
@@ -125,6 +131,7 @@ class OpenSlideWSI:
                 # set openslide attrs as self
                 self.dimensions = self.get_dimensions()
                 self.width, self.height = self.dimensions
+                self.tile_size = extract_tile_size(self.slide_path)
                 self.level_count = self.img.level_count
                 self.level_downsamples = self.img.level_downsamples
                 self.level_dimensions = self.img.level_dimensions
@@ -565,6 +572,134 @@ class OpenSlideWSI:
             gdf_contours, annotated, contours_saveto, thumbnail_width / self.width
         )
 
+        return gdf_saveto
+
+    @torch.inference_mode()
+    def segment_tissue_alternative(
+        self,
+        target_mag: int = 10,
+        holes_are_tissue: bool = True,
+        job_dir: str | None = None,
+    ):
+        """
+        Alternative tissue segmentation implementation using an entropy mask and HSV thresholding.
+
+        Args:
+            target_mag (int, optional): Target magnification for segmentation. Defaults to 10.
+            holes_are_tissue (bool, optional): If False, fill in holes. Defaults to True.
+            job_dir (str | None, optional): Directory to save outputs.
+
+        Returns:
+            str: Path to the saved GeoJSON contours.
+        """
+        self._lazy_initialize()
+
+        # --- 1) SEGMENTATION THUMBNAIL --- #
+
+        # 1a) Get or compute your entropy mask (whatever approach you like)
+        mask = entropy_mask(self.slide_path)  # shape: (H, W)
+        entropy_mpp = self.tile_size * self.mpp
+
+        # 1b) Convert the entropy mask to uint8 and resize to match the 'segmentation_size'
+        # Compute the magnification-based downscale factor
+        destination_mpp = 10 / target_mag  # microns per pixel for target mag
+        segmentation_scale = entropy_mpp / destination_mpp
+
+        # Determine target size for the segmentation thumbnail
+        seg_w = int(round(self.width / segmentation_scale))
+        seg_h = int(round(self.height / segmentation_scale))
+
+        mask_uint8 = (mask * 255).astype(np.uint8)
+        resized_mask = resize(
+            mask_uint8,
+            (seg_h, seg_w),
+            anti_aliasing=True,
+            order=1,
+        )
+
+        # 1c) Get a thumbnail from the slide at the same dimension
+        thumbnail_seg = self.get_thumbnail((seg_w, seg_h))
+        if thumbnail_seg.size != (seg_w, seg_h):
+            thumbnail_seg = thumbnail_seg.resize((seg_w, seg_h), PIL.Image.LANCZOS)
+        thumbnail_seg_np = np.array(thumbnail_seg)
+
+        # 1d) Apply the mask to the segmentation thumbnail
+        thumbnail_seg_np[resized_mask == 0] = [255, 255, 255]
+
+        # 1e) Convert masked thumbnail to HSV and apply Otsu thresholds
+        hsv_seg = rgb2hsv(thumbnail_seg_np)
+        hue = hsv_seg[..., 0]
+        sat = hsv_seg[..., 1]
+        val = hsv_seg[..., 2]
+        hue_thr = threshold_otsu(hue)
+        sat_thr = threshold_otsu(sat)
+        val_thr = threshold_otsu(val)
+        # Combined final segmentation mask
+        combined_mask = ((hue > hue_thr) & (sat > sat_thr) & (val < val_thr)).astype(
+            np.uint8
+        ) * 255
+
+        # 1f) Optionally fill holes
+        if not holes_are_tissue:
+            contours, _ = cv2.findContours(
+                combined_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
+            )
+            for hole in contours:
+                cv2.drawContours(combined_mask, [hole], 0, 255, -1)
+
+        # --- 2) POST-PROCESSING & SAVING GEOJSON --- #
+
+        # 2a) Convert to geojson contours
+        gdf_saveto = os.path.join(job_dir, "contours_geojson", f"{self.name}.geojson")
+        os.makedirs(os.path.dirname(gdf_saveto), exist_ok=True)
+
+        segmentation_scale = self.width / seg_w
+        # Suppose you still want to store the scaling in the GeoJSON.
+        # We'll assume the "pixel_size" is self.mpp, etc. Adjust as needed.
+        gdf_contours = mask_to_gdf(
+            mask=combined_mask,
+            max_nb_holes=0 if holes_are_tissue else 5,
+            min_contour_area=1000,
+            pixel_size=self.mpp,
+            contour_scale=segmentation_scale,  # or some factor if you want real-world coords
+        )
+        gdf_contours.set_crs("EPSG:3857", inplace=True)
+        gdf_contours.to_file(gdf_saveto, driver="GeoJSON")
+        self.gdf_contours = gdf_contours
+        self.tissue_seg_path = gdf_saveto
+
+        # --- 3) VISUALIZATION THUMBNAIL --- #
+
+        # 3a) Make a smaller “viz” thumbnail, capping the largest dimension at `max_dimension_for_viz`
+        max_dimension = 1000
+        if self.width > self.height:
+            viz_w = max_dimension
+            viz_h = int(round(viz_w * self.height / self.width))
+        else:
+            viz_h = max_dimension
+            viz_w = int(round(viz_h * self.width / self.height))
+
+        thumbnail_viz = self.get_thumbnail((viz_w, viz_h))
+        # We’ll convert it to NumPy for overlay
+        viz_np = np.array(thumbnail_viz)
+
+        # 3b) Overlay the contours on the “viz” thumbnail
+        contours_saveto = os.path.join(job_dir, "contours", f"{self.name}.jpg")
+        os.makedirs(os.path.dirname(contours_saveto), exist_ok=True)
+
+        overlay_gdf_on_thumbnail(
+            gdf_contours,
+            viz_np,
+            contours_saveto,
+            scale=viz_w / self.width,  # scale factor for coordinate transformation
+        )
+
+        # 3c) Save the segmentation thumbnail for debugging if you want
+        seg_thumb_saveto = os.path.join(job_dir, "thumbnails_seg", f"{self.name}.jpg")
+        os.makedirs(os.path.dirname(seg_thumb_saveto), exist_ok=True)
+        Image.fromarray(thumbnail_seg_np).save(seg_thumb_saveto)
+
+        # Return the path to the GeoJSON
         return gdf_saveto
 
     def get_best_level_and_custom_downsample(
