@@ -78,6 +78,7 @@ def parse_arguments():
         choices=[
             "hest",
             "grandqc",
+            "entropy",
         ],
         help="Type of tissue vs background segmenter. Options are HEST or GrandQC.",
     )
@@ -124,18 +125,25 @@ def process_slide(args):
 
     # Step 1: Tissue Segmentation
     print("Running tissue segmentation...")
-    segmentation_model = segmentation_model_factory(
-        model_name=args.segmenter,
-        confidence_thresh=args.seg_conf_thresh,
-        device=f"cuda:{args.gpu}",
-    )
-    slide.segment_tissue(
-        segmentation_model=segmentation_model,
-        target_mag=segmentation_model.target_mag,
-        job_dir=args.job_dir,
-    )
+    if args.segmenter == "entropy":
+        slide.segment_tissue_alternative(
+            target_mag=args.mag,
+            holes_are_tissue=False,
+            job_dir=args.job_dir,
+        )
+    else:
+        segmentation_model = segmentation_model_factory(
+            model_name=args.segmenter,
+            confidence_thresh=args.seg_conf_thresh,
+            device=f"cuda:{args.gpu}",
+        )
+        slide.segment_tissue(
+            segmentation_model=segmentation_model,
+            target_mag=segmentation_model.target_mag,
+            job_dir=args.job_dir,
+        )
     print(
-        f"Tissue segmentation completed. Results saved to {args.job_dir}contours_geojson and {args.job_dir}contours"
+        f"Tissue segmentation completed. Results saved to {args.job_dir}/contours_geojson and {args.job_dir}/contours"
     )
 
     # Step 2: Tissue Coordinate Extraction (Patching)
@@ -160,20 +168,20 @@ def process_slide(args):
     print(f"Tissue coordinates extracted and saved to {viz_coords_path}.")
 
     # Step 4: Feature Extraction
-    print("Extracting features from patches...")
-    encoder = encoder_factory(args.patch_encoder)
-    encoder.eval()
-    encoder.to(f"cuda:{args.gpu}")
-    features_path = features_dir = os.path.join(
-        save_coords, "features_{}".format(args.patch_encoder)
-    )
-    slide.extract_patch_features(
-        patch_encoder=encoder,
-        coords_path=os.path.join(save_coords, "patches", f"{slide.name}_patches.h5"),
-        save_features=features_dir,
-        device=f"cuda:{args.gpu}",
-    )
-    print(f"Feature extraction completed. Results saved to {features_path}")
+    # print("Extracting features from patches...")
+    # encoder = encoder_factory(args.patch_encoder)
+    # encoder.eval()
+    # encoder.to(f"cuda:{args.gpu}")
+    # features_path = features_dir = os.path.join(
+    #     save_coords, "features_{}".format(args.patch_encoder)
+    # )
+    # slide.extract_patch_features(
+    #     patch_encoder=encoder,
+    #     coords_path=os.path.join(save_coords, "patches", f"{slide.name}_patches.h5"),
+    #     save_features=features_dir,
+    #     device=f"cuda:{args.gpu}",
+    # )
+    # print(f"Feature extraction completed. Results saved to {features_path}")
 
 
 def main():

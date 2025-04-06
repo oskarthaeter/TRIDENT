@@ -22,6 +22,7 @@ ENV LD_LIBRARY_PATH=/opt/hpcx/ucx/lib:$LD_LIBRARY_PATH
 
 RUN pip3 install --no-cache-dir \
     openslide-python \
+    scikit-image \
     && rm -rf /root/.cache/pip
 
 # Switch to the new user
