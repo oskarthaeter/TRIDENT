@@ -127,7 +127,6 @@ def process_slide(args):
     print("Running tissue segmentation...")
     if args.segmenter == "entropy":
         slide.segment_tissue_alternative(
-            target_mag=args.mag,
             holes_are_tissue=False,
             job_dir=args.job_dir,
         )

@@ -1,10 +1,11 @@
 import numpy as np
-import scipy as sp
 import math
 from pathlib import Path
-from skimage.filters import rank, threshold_multiotsu
-from skimage.morphology import remove_small_objects, disk
+from skimage.filters import rank, threshold_multiotsu, threshold_otsu
+from skimage.color import rgb2hsv
+from skimage.morphology import disk, opening, closing
 import PIL.Image
+import openslide
 import matplotlib.pyplot as plt
 from trident.wsi_objects.utils import (
     extract_page_infos,
@@ -32,14 +33,13 @@ def prep_segmentation(
     byte_counts: np.ndarray,
     tiles_x: int,
     tiles_y: int,
-    lower_percentile: int = 5,
-    upper_percentile: int = 99,
-    disk_size: int = 128,
-    s0: int = 100,
-    s1: int = 100,
-    verbose: bool = False,
 ):
-    heatmap_list = []
+    lower_percentile = 5
+    upper_percentile = 99
+    disk_size = 128
+    s0 = 100
+    s1 = 100
+
     # Normalization
     lower_bound, upper_bound = np.percentile(
         byte_counts, [lower_percentile, upper_percentile]
@@ -51,20 +51,23 @@ def prep_segmentation(
     normed_byte_counts = (normed_byte_counts * 255).astype(np.uint8)
     byte_count_array = normed_byte_counts.reshape(tiles_y, tiles_x)
 
-    # Save heatmap
-    if verbose:
-        heatmap_list.append(prep_heatmap(byte_count_array.copy()))
-
     # Apply bilateral filtering
     byte_count_array = rank.mean_bilateral(
         byte_count_array, disk(disk_size), s0=s0, s1=s1
     )
 
-    if verbose:
-        heatmap_list.append(prep_heatmap(byte_count_array.copy()))
-        return byte_count_array, heatmap_list
-    else:
-        return byte_count_array
+    return byte_count_array
+
+
+def segment_array_with_otsu(heatmap: np.ndarray):
+    """
+    Segments a tile byte count array into two regions using Otsu's thresholding.
+    """
+
+    # Apply Otsu's threshold directly
+    otsu_threshold = threshold_otsu(heatmap)
+    segmented_array = heatmap >= otsu_threshold
+    return segmented_array
 
 
 def segment_array_with_multiotsu(heatmap: np.ndarray):
@@ -80,9 +83,7 @@ def segment_array_with_multiotsu(heatmap: np.ndarray):
 
 def entropy_mask(
     filepath: Path,
-    area_threshold=64,
-    verbose: bool = False,
-) -> dict:
+) -> np.ndarray:
     """
     Segments WSI into tissue foreground and background using entropy-based segmentation.
 
@@ -109,21 +110,47 @@ def entropy_mask(
         summed_tile_counts,
         tiles_x,
         tiles_y,
-        lower_percentile=5,
-        upper_percentile=99,
-        verbose=verbose,
     )
-    if verbose:
-        heatmap, heatmap_list = heatmap
 
     # Perform segmentation
-    mask = segment_array_with_multiotsu(heatmap)
+    mask = segment_array_with_otsu(heatmap)
 
-    # mask = remove_small_objects(
-    #     mask, min_size=area_threshold, connectivity=2
-    # )
+    # opening to remove small objects
+    selem = disk(1)
+    mask = opening(mask.astype(np.uint8), footprint=selem)
+    mask = mask.astype(np.uint8)
+    mask = np.clip(mask, 0, 1)
 
-    if verbose:
-        return mask, heatmap_list
+    return mask
+
+
+def thumbnail_segmentation(
+    slide_path: str,
+    get_thumbnail_fn: callable = None,
+):
+    mask = entropy_mask(slide_path)
+    height, width = mask.shape
+
+    # Load the WSI
+    if get_thumbnail_fn is not None:
+        thumbnail = get_thumbnail_fn((height, width))
     else:
-        return mask
+        with openslide.OpenSlide(slide_path) as slide:
+            thumbnail = slide.get_thumbnail((width, height))
+
+    # Ensure that the thumbnail is actually the correct size
+    if thumbnail.size != (width, height):
+        thumbnail = thumbnail.resize((width, height))
+
+    masked_thumbnail = np.array(thumbnail)
+    # Set everything in the thumbnail to white where mask is 0
+    masked_thumbnail[mask == 0] = [255, 255, 255]
+
+    # Convert to HSV
+    masked_hue_channel = rgb2hsv(masked_thumbnail)[:, :, 0]
+
+    # Threshold
+    hue_threshold = threshold_otsu(masked_hue_channel)
+    final_mask = masked_hue_channel > hue_threshold
+
+    return final_mask

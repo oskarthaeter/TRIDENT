@@ -24,14 +24,12 @@ def coord_to_tileindex(
 
 
 def coords_to_tiles(
-    slide_path: Path,
-    coords: np.ndarray,
-    patch_size: int,
+    slide_path: Path, coords: np.ndarray, patch_size: int, level: int
 ) -> list:
     """
     Convert pixel slide coordinates to tiles.
     """
-    slide_infos = extract_page_infos(slide_path, 0)
+    slide_infos = extract_page_infos(slide_path, level)
     slide_width, slide_height = slide_infos["width"], slide_infos["height"]
     tile_size = slide_infos["tile_size"]
     tiles_x = math.ceil(slide_width / tile_size)
@@ -158,7 +156,7 @@ def save_entropy_patches(
     ]
 
     # Convert aligned coordinates to tiles
-    tiles = coords_to_tiles(slide_path, valid_coords, patch_size)
+    tiles = coords_to_tiles(slide_path, valid_coords, patch_size, level)
 
     # Extract JPEG tables
     jpeg_tables = extract_JPEGTables(slide_path)
