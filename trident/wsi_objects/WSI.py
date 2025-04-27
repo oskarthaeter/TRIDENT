@@ -7,10 +7,7 @@ import warnings
 import torch
 from typing import List, Tuple, Optional
 from torch.utils.data import DataLoader
-from skimage.filters import threshold_otsu
-from skimage.transform import resize
-from skimage.color import rgb2hsv
-import PIL.Image
+import time
 
 from trident.wsi_objects.WSIPatcher import *
 from trident.wsi_objects.WSIPatcherDataset import WSIPatcherDataset
@@ -23,7 +20,10 @@ from trident.IO import (
     get_num_workers,
 )
 from trident.wsi_objects.entropy_adaptor import save_entropy_patches
-from trident.wsi_objects.entropy_segmentation import entropy_mask
+from trident.wsi_objects.entropy_segmentation import (
+    entropy_mask,
+    thumbnail_segmentation,
+)
 from trident.wsi_objects.utils import extract_tile_size
 
 
@@ -409,6 +409,8 @@ class OpenSlideWSI:
                     return 10
                 elif mpp_x < 2.4:
                     return 5
+                elif mpp_x < 4.8:
+                    return 2.5
                 else:
                     raise ValueError(f"Identified mpp is too low: mpp={mpp_x}")
 
@@ -465,8 +467,8 @@ class OpenSlideWSI:
         >>> wsi.segment_tissue(segmentation_model, target_mag=10, job_dir="output_dir")
         >>> # Results saved in "output_dir"
         """
-
         self._lazy_initialize()
+
         max_dimension = 1000
         if self.width > self.height:
             thumbnail_width = max_dimension
@@ -577,7 +579,6 @@ class OpenSlideWSI:
     @torch.inference_mode()
     def segment_tissue_alternative(
         self,
-        target_mag: int = 10,
         holes_are_tissue: bool = True,
         job_dir: str | None = None,
     ):
@@ -594,83 +595,36 @@ class OpenSlideWSI:
         """
         self._lazy_initialize()
 
-        # --- 1) SEGMENTATION THUMBNAIL --- #
+        # mask = thumbnail_segmentation(self.slide_path, self.get_thumbnail)
+        mask = entropy_mask(self.slide_path)
 
-        # 1a) Get or compute your entropy mask (whatever approach you like)
-        mask = entropy_mask(self.slide_path)  # shape: (H, W)
-        entropy_mpp = self.tile_size * self.mpp
+        mask = mask.astype(np.uint8) * 255
+        mask_width = int(mask.shape[1])
 
-        # 1b) Convert the entropy mask to uint8 and resize to match the 'segmentation_size'
-        # Compute the magnification-based downscale factor
-        destination_mpp = 10 / target_mag  # microns per pixel for target mag
-        segmentation_scale = entropy_mpp / destination_mpp
-
-        # Determine target size for the segmentation thumbnail
-        seg_w = int(round(self.width / segmentation_scale))
-        seg_h = int(round(self.height / segmentation_scale))
-
-        mask_uint8 = (mask * 255).astype(np.uint8)
-        resized_mask = resize(
-            mask_uint8,
-            (seg_h, seg_w),
-            anti_aliasing=True,
-            order=1,
-        )
-
-        # 1c) Get a thumbnail from the slide at the same dimension
-        thumbnail_seg = self.get_thumbnail((seg_w, seg_h))
-        if thumbnail_seg.size != (seg_w, seg_h):
-            thumbnail_seg = thumbnail_seg.resize((seg_w, seg_h), PIL.Image.LANCZOS)
-        thumbnail_seg_np = np.array(thumbnail_seg)
-
-        # 1d) Apply the mask to the segmentation thumbnail
-        thumbnail_seg_np[resized_mask == 0] = [255, 255, 255]
-
-        # 1e) Convert masked thumbnail to HSV and apply Otsu thresholds
-        hsv_seg = rgb2hsv(thumbnail_seg_np)
-        hue = hsv_seg[..., 0]
-        sat = hsv_seg[..., 1]
-        val = hsv_seg[..., 2]
-        hue_thr = threshold_otsu(hue)
-        sat_thr = threshold_otsu(sat)
-        val_thr = threshold_otsu(val)
-        # Combined final segmentation mask
-        combined_mask = ((hue > hue_thr) & (sat > sat_thr) & (val < val_thr)).astype(
-            np.uint8
-        ) * 255
-
-        # 1f) Optionally fill holes
         if not holes_are_tissue:
             contours, _ = cv2.findContours(
-                combined_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
+                mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
             )
             for hole in contours:
-                cv2.drawContours(combined_mask, [hole], 0, 255, -1)
+                cv2.drawContours(mask, [hole], 0, 255, -1)
 
-        # --- 2) POST-PROCESSING & SAVING GEOJSON --- #
-
-        # 2a) Convert to geojson contours
+        # Convert to geojson contours
         gdf_saveto = os.path.join(job_dir, "contours_geojson", f"{self.name}.geojson")
         os.makedirs(os.path.dirname(gdf_saveto), exist_ok=True)
 
-        segmentation_scale = self.width / seg_w
-        # Suppose you still want to store the scaling in the GeoJSON.
-        # We'll assume the "pixel_size" is self.mpp, etc. Adjust as needed.
+        segmentation_scale = self.width / mask_width
         gdf_contours = mask_to_gdf(
-            mask=combined_mask,
+            mask=mask,
             max_nb_holes=0 if holes_are_tissue else 5,
             min_contour_area=1000,
             pixel_size=self.mpp,
-            contour_scale=segmentation_scale,  # or some factor if you want real-world coords
+            contour_scale=segmentation_scale,
         )
         gdf_contours.set_crs("EPSG:3857", inplace=True)
         gdf_contours.to_file(gdf_saveto, driver="GeoJSON")
         self.gdf_contours = gdf_contours
         self.tissue_seg_path = gdf_saveto
 
-        # --- 3) VISUALIZATION THUMBNAIL --- #
-
-        # 3a) Make a smaller “viz” thumbnail, capping the largest dimension at `max_dimension_for_viz`
         max_dimension = 1000
         if self.width > self.height:
             viz_w = max_dimension
@@ -680,10 +634,9 @@ class OpenSlideWSI:
             viz_w = int(round(viz_h * self.width / self.height))
 
         thumbnail_viz = self.get_thumbnail((viz_w, viz_h))
-        # We’ll convert it to NumPy for overlay
         viz_np = np.array(thumbnail_viz)
 
-        # 3b) Overlay the contours on the “viz” thumbnail
+        # Overlay the contours on the “viz” thumbnail
         contours_saveto = os.path.join(job_dir, "contours", f"{self.name}.jpg")
         os.makedirs(os.path.dirname(contours_saveto), exist_ok=True)
 
@@ -691,14 +644,8 @@ class OpenSlideWSI:
             gdf_contours,
             viz_np,
             contours_saveto,
-            scale=viz_w / self.width,  # scale factor for coordinate transformation
+            scale=viz_w / self.width,
         )
-
-        # 3c) Save the segmentation thumbnail for debugging if you want
-        seg_thumb_saveto = os.path.join(job_dir, "thumbnails_seg", f"{self.name}.jpg")
-        os.makedirs(os.path.dirname(seg_thumb_saveto), exist_ok=True)
-        Image.fromarray(thumbnail_seg_np).save(seg_thumb_saveto)
-
         # Return the path to the GeoJSON
         return gdf_saveto
 
@@ -789,6 +736,8 @@ class OpenSlideWSI:
             Overlap between patches in pixels. Defaults to 0.
         min_tissue_proportion: float, optional
             Minimum proportion of the patch under tissue to be kept. Defaults to 0.
+        export_entropy_format : bool, optional
+            If True, export the coordinates in a format compatible with (offset, bytecount) dataloading. Defaults to False.
 
         Returns:
         --------

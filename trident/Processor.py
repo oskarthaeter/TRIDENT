@@ -347,7 +347,6 @@ class Processor:
                 # call a function from WSI object to do the work
                 if segmentation_model is None:
                     gdf_saveto = wsi.segment_tissue_alternative(
-                        target_mag=seg_mag,
                         holes_are_tissue=holes_are_tissue,
                         job_dir=self.job_dir,
                     )
@@ -360,22 +359,24 @@ class Processor:
                         batch_size=batch_size,
                     )
 
-                remove_lock(os.path.join(saveto, f"{wsi.name}.jpg"))
-
                 gdf = gpd.read_file(gdf_saveto, rows=1)
                 if gdf.empty:
+                    gdf_saveto = wsi.segment_tissue_alternative(
+                        holes_are_tissue=holes_are_tissue,
+                        job_dir=self.job_dir,
+                    )
                     update_log(
                         os.path.join(self.job_dir, "_logs_segmentation.txt"),
                         f"{wsi.name}{wsi.ext}",
-                        "Segmentation returned empty GeoDataFrame.",
+                        "Segmentation returned empty GeoDataFrame. Segmented again using entropy segmenter.",
                     )
-                    self.loop.set_postfix_str(f"Empty GeoDataFrame for {wsi.name}.")
                 else:
                     update_log(
                         os.path.join(self.job_dir, "_logs_segmentation.txt"),
                         f"{wsi.name}{wsi.ext}",
                         "Tissue segmented.",
                     )
+                remove_lock(os.path.join(saveto, f"{wsi.name}.jpg"))
 
                 self.cleanup(f"{wsi.name}{wsi.ext}")
             except Exception as e:
@@ -507,6 +508,7 @@ class Processor:
                 self.loop.set_postfix_str(
                     f"GeoJSON not found for {wsi.name}. Skipping..."
                 )
+                print(f"GeoJSON not found for {wsi.name}. Skipping...")
                 update_log(
                     os.path.join(self.job_dir, saveto, "_logs_coords.txt"),
                     f"{wsi.name}{wsi.ext}",

@@ -312,11 +312,31 @@ def main():
 
 
 if __name__ == "__main__":
-    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench/IMP_CRC --gpu 0 --segmenter entropy --mag 5
-    # 1:45:40
     # python run_batch_of_slides.py --task seg --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench/IMP_CRC/grandqc --gpu 0 --segmenter grandqc
-
     # python run_batch_of_slides.py --task coords --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench --mag 20 --patch_size 512 --export_entropy_format
     # python run_batch_of_slides.py --task feat --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench --patch_encoder uni_v1 --coords_dir /mnt/patho-bench/20x_512px_0px_overlap --batch_size 256
+
     # python run_single_slide.py --slide_path /mnt/IMP_CRC/CRS1/slides/CRC_0777.svs --job_dir /mnt/patho-bench/testing/grandqc --mag 20 --patch_size 256 --segmenter grandqc
+    # python run_single_slide.py --slide_path /mnt/oskar/slides/e2024000032t1-a-4_143250.svs --job_dir /mnt/oskar --mag 40 --patch_size 512 --segmenter grandqc
+    # python run_single_slide.py --slide_path /mnt/oskar/slides/h2021014634t2-a-5_023026.svs --job_dir /mnt/oskar --mag 40 --patch_size 512 --segmenter hest
+    # python run_single_slide.py --slide_path /mnt/oskar/slides/h2023007068t1-a-2_131136.svs --job_dir /mnt/oskar/test --mag 10 --patch_size 2048 --segmenter entropy
+
     main()
+
+    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar --gpu 0 --mag 40 --patch_size 512 --segmenter grandqc
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar --gpu 0 --mag 40 --patch_size 512 --export_entropy_format
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar --gpu 0 --mag 10 --patch_size 512 --export_entropy_format
+
+    ### with hest
+    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/hest --gpu 0 --mag 40 --patch_size 512 --segmenter hest
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/hest --gpu 0 --mag 40 --patch_size 512 --export_entropy_format
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/hest --gpu 0 --mag 40 --patch_size 1024 --export_entropy_format
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/hest --gpu 0 --mag 10 --patch_size 512 --export_entropy_format
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/hest --gpu 0 --mag 10 --patch_size 1024 --export_entropy_format
+
+    ### with entropy
+    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/entropy --gpu 0 --mag 40 --patch_size 512 --segmenter entropy
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/entropy --gpu 0 --mag 40 --patch_size 512 --export_entropy_format
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/entropy --gpu 0 --mag 40 --patch_size 1024 --export_entropy_format
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/entropy --gpu 0 --mag 10 --patch_size 512 --export_entropy_format
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/entropy --gpu 0 --mag 10 --patch_size 1024 --export_entropy_format
