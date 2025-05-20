@@ -340,3 +340,6 @@ if __name__ == "__main__":
     # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/entropy --gpu 0 --mag 40 --patch_size 1024 --export_entropy_format
     # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/entropy --gpu 0 --mag 10 --patch_size 512 --export_entropy_format
     # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar/entropy --gpu 0 --mag 10 --patch_size 1024 --export_entropy_format
+
+    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/nfs03-R6/staining/TCGA_256_40 --job_dir /mnt/nfs03-R6/staining/trident --gpu 0 --mag 40 --patch_size 512 --segmenter entropy
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/nfs03-R6/staining/TCGA_256_40 --job_dir /mnt/nfs03-R6/staining/trident --gpu 0 --mag 40 --patch_size 512 --export_entropy_format
