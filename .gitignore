@@ -7,4 +7,4 @@ main
 *.pth
 .cache
 *.out
-*_private.*
+*_private.n*

@@ -14,10 +14,20 @@ NUM_BINS = 10
 
 def random_sample(h5_path: Path, num_samples: int) -> torch.Tensor:
     with h5py.File(h5_path, "r") as f:
-        coords = f["coords"][:]
+        coords = torch.tensor(f["coords"][:], dtype=torch.long)
+        bytecounts = torch.tensor(f["bytecounts"][:], dtype=torch.float)
+    if bytecounts.ndim > 1:
+        bytecounts = torch.mean(bytecounts, dim=1)
+
     indices = torch.randint(0, len(coords), (num_samples,))
-    coords = coords[indices]
-    return coords
+    sampled_coords = coords[indices]
+    sampled_bytecounts = bytecounts[indices]
+
+    # Sort the sampled coords by descending bytecount
+    sorted_order = torch.argsort(sampled_bytecounts, descending=False)
+    sorted_coords = sampled_coords[sorted_order]
+
+    return sorted_coords
 
 
 def entropy_bin_sampling(
@@ -28,36 +38,131 @@ def entropy_bin_sampling(
             f"num_bins ({num_bins}) must be greater than ignore_k_bins ({ignore_k_bins})"
         )
     keep_k_bins = num_bins - ignore_k_bins
+
     with h5py.File(h5_path, "r") as f:
-        coords = f["coords"][:]
-        bytecounts = f["bytecounts"][:]
+        coords = torch.tensor(f["coords"][:], dtype=torch.long)
+        bytecounts = torch.tensor(f["bytecounts"][:], dtype=torch.float)
     if bytecounts.shape[0] != coords.shape[0]:
         raise ValueError("coords and bytecounts must have the same length")
     if bytecounts.ndim > 1:
-        bytecounts = torch.mean(torch.tensor(bytecounts), dim=1)
-    else:
-        bytecounts = torch.tensor(bytecounts)
-    # build num_bins bins
+        bytecounts = torch.mean(bytecounts, dim=1)
+
     bin_edges = torch.linspace(bytecounts.min(), bytecounts.max(), num_bins + 1)
-    bin_indices = torch.bucketize(bytecounts, bin_edges) - 1  # bin ∈ [0, num_bins-1]
-    # restrict to top-k bins (i.e., the k bins with highest bin indices)
+    bin_indices = torch.bucketize(bytecounts, bin_edges) - 1
     max_bin = num_bins - 1
     min_bin = max(0, max_bin - keep_k_bins + 1)
-    bin_samples = []
     active_bins = list(range(min_bin, max_bin + 1))
+
+    # Collect candidate indices
+    all_candidates = []
+    per_bin_target = num_samples // keep_k_bins
     for i in active_bins:
         bin_indices_i = torch.where(bin_indices == i)[0]
         if len(bin_indices_i) == 0:
             continue
-        bin_samples_i = torch.randint(
-            0, len(bin_indices_i), (num_samples // keep_k_bins,)
-        )
-        bin_samples.append(bin_indices_i[bin_samples_i])
-    if len(bin_samples) == 0:
+        if len(bin_indices_i) < per_bin_target:
+            sampled = bin_indices_i
+        else:
+            rand_idx = torch.randint(0, len(bin_indices_i), (per_bin_target,))
+            sampled = bin_indices_i[rand_idx]
+        all_candidates.append(sampled)
+
+    if len(all_candidates) == 0:
         raise ValueError("No samples available in the top-k bins.")
-    bin_samples = torch.cat(bin_samples)
-    coords = torch.tensor(coords)[bin_samples]
-    return coords
+
+    gathered = torch.cat(all_candidates)
+
+    # Top up if we’re still short
+    if len(gathered) < num_samples:
+        remaining = num_samples - len(gathered)
+        # gather all coords from active bins
+        fallback_pool = torch.where(
+            (bin_indices >= min_bin) & (bin_indices <= max_bin)
+        )[0]
+        fallback_pool = fallback_pool[~torch.isin(fallback_pool, gathered)]
+        if len(fallback_pool) < remaining:
+            raise ValueError(
+                "Not enough fallback samples available to fulfill the request."
+            )
+        extra = fallback_pool[torch.randperm(len(fallback_pool))[:remaining]]
+        gathered = torch.cat([gathered, extra])
+    elif len(gathered) > num_samples:
+        # trim to exact count
+        gathered = gathered[torch.randperm(len(gathered))[:num_samples]]
+
+    return coords[gathered]
+
+
+def entropy_top_sampling(
+    num_bins: int, h5_path: Path, num_samples: int, ignore_k_bins: int = 0
+) -> torch.Tensor:
+    if num_bins <= ignore_k_bins:
+        raise ValueError(
+            f"num_bins ({num_bins}) must be greater than ignore_k_bins ({ignore_k_bins})"
+        )
+    keep_k_bins = num_bins - ignore_k_bins
+
+    with h5py.File(h5_path, "r") as f:
+        coords = torch.tensor(f["coords"][:], dtype=torch.long)
+        bytecounts = torch.tensor(f["bytecounts"][:], dtype=torch.float)
+
+    if bytecounts.shape[0] != coords.shape[0]:
+        raise ValueError("coords and bytecounts must have the same length")
+    if bytecounts.ndim > 1:
+        bytecounts = torch.mean(bytecounts, dim=1)
+
+    bin_edges = torch.linspace(bytecounts.min(), bytecounts.max(), num_bins + 1)
+    bin_indices = torch.bucketize(bytecounts, bin_edges) - 1
+    max_bin = num_bins - 1
+    min_bin = max(0, max_bin - keep_k_bins + 1)
+    active_bins = list(range(min_bin, max_bin + 1))
+
+    samples_per_bin = num_samples // keep_k_bins
+    all_samples = []
+
+    for bin_id in active_bins:
+        bin_mask = bin_indices == bin_id
+        bin_bytecounts = bytecounts[bin_mask]
+        bin_coords = coords[bin_mask]
+
+        if bin_bytecounts.numel() == 0:
+            continue
+
+        topk = min(samples_per_bin, bin_bytecounts.numel())
+        sorted_indices = torch.argsort(bin_bytecounts, descending=True)[:topk]
+        all_samples.append(bin_coords[sorted_indices])
+
+    if not all_samples:
+        raise ValueError("No samples found in selected bins.")
+
+    gathered = torch.cat(all_samples)
+
+    # If we have more or fewer than num_samples, adjust
+    if len(gathered) > num_samples:
+        gathered = gathered[torch.randperm(len(gathered))[:num_samples]]
+    elif len(gathered) < num_samples:
+        # fallback: top-N overall
+        remaining = num_samples - len(gathered)
+        fallback_mask = (bin_indices >= min_bin) & (bin_indices <= max_bin)
+        fallback_indices = torch.where(fallback_mask)[0]
+        fallback_bytecounts = bytecounts[fallback_indices]
+        fallback_coords = coords[fallback_indices]
+
+        already_used = torch.cat(
+            [torch.nonzero(bin_indices == b).flatten() for b in active_bins]
+        )
+        fallback_indices = fallback_indices[~torch.isin(fallback_indices, already_used)]
+
+        if fallback_indices.numel() < remaining:
+            raise ValueError("Not enough fallback samples to complete the request.")
+
+        sorted_fallback = torch.argsort(fallback_bytecounts, descending=True)[
+            :remaining
+        ]
+        fallback_top_coords = fallback_coords[sorted_fallback]
+        gathered = torch.cat([gathered, fallback_top_coords])
+
+    return gathered
 
 
 class PatchDataset(Dataset):
