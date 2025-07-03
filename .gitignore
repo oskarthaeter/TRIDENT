@@ -8,3 +8,7 @@ main
 .cache
 *.out
 *_private.n*
+*_private.*
+tutorials/*.png
+tutorials/*.jpeg
+tutorials/*.jpg
