@@ -1,6 +1,11 @@
 import tifffile
 from pathlib import Path
 import re
+import os
+import numpy as np
+import torch
+import torchvision.transforms.v2 as transforms
+from torchvision.io import decode_jpeg, ImageReadMode
 
 
 def extract_bytecounts(tif_path: Path) -> tuple[int, ...]:
@@ -92,3 +97,41 @@ def extract_page_infos(tif_path: Path, level: int) -> dict:
             else:
                 page_counter += 1
     raise ValueError(f"Page {level} not found")
+
+
+def extract_thumbnail_info(tif_path: Path) -> dict:
+    with tifffile.TiffFile(tif_path) as tif:
+        # get second page
+        page = tif.pages[1]
+        strip_offsets = page.tags["StripOffsets"].value
+        strip_bytecounts = page.tags["StripByteCounts"].value
+        rows_per_strip = page.tags["RowsPerStrip"].value
+        image_width, image_height = (
+            page.tags["ImageWidth"].value,
+            page.tags["ImageLength"].value,
+        )
+        return {
+            "offsets": strip_offsets,
+            "bytecounts": strip_bytecounts,
+            "rows_per_strip": rows_per_strip,
+            "width": image_width,
+            "height": image_height,
+        }
+
+
+def extract_thumbnail(slide_path: Path) -> torch.Tensor:
+    info = extract_thumbnail_info(slide_path)
+    offset = info["offsets"][0]
+    bytecount = info["bytecounts"][0]
+    # fd = os.open(slide_path, os.O_RDONLY | os.O_DIRECT | os.O_NONBLOCK)
+    fd = os.open(slide_path, os.O_RDONLY | os.O_NONBLOCK)
+    thumbnail_buffer = torch.empty(int(bytecount), dtype=torch.uint8).pin_memory()
+    os.preadv(fd, [np.asarray(thumbnail_buffer).data], offset, os.RWF_HIPRI)
+    os.close(fd)
+
+    decoded_thumbnail = decode_jpeg(
+        thumbnail_buffer,
+        mode=ImageReadMode.UNCHANGED,
+    )
+    thumbnail_tensor = transforms.functional.to_image(decoded_thumbnail)
+    return thumbnail_tensor
