@@ -124,6 +124,39 @@ def entropy_mask(
     return mask
 
 
+def entropy_heatmap(
+    filepath: Path,
+) -> np.ndarray:
+    """
+    Segments WSI into tissue foreground and background using entropy-based segmentation.
+
+    Parameters:
+        filepath (str): Path to the slide file.
+
+    Returns:
+        numpy.ndarray: Final combined segmentation mask.
+    """
+
+    # Extract tile information
+    slide_infos = extract_page_infos(filepath, 0)
+    tile_byte_counts = np.array(slide_infos["bytecounts"])
+    image_width = slide_infos["width"]
+    image_height = slide_infos["height"]
+    tile_size = slide_infos["tile_size"]
+
+    # Grid dimensions
+    tiles_x = math.ceil(image_width / tile_size)
+    tiles_y = math.ceil(image_height / tile_size)
+    summed_tile_counts = tile_byte_counts
+
+    heatmap = prep_segmentation(
+        summed_tile_counts,
+        tiles_x,
+        tiles_y,
+    )
+    return heatmap
+
+
 def thumbnail_segmentation(
     slide_path: str,
     get_thumbnail_fn: callable = None,
