@@ -357,3 +357,10 @@ if __name__ == "__main__":
     # python run_batch_of_slides.py --task coords --wsi_dir /mnt/new_slides --job_dir /mnt/oskar/hest --gpu 0 --mag 40 --patch_size 1024 --export_entropy_format
     # python run_batch_of_slides.py --task coords --wsi_dir /mnt/new_slides --job_dir /mnt/oskar/hest --gpu 0 --mag 10 --patch_size 512 --export_entropy_format
     # python run_batch_of_slides.py --task coords --wsi_dir /mnt/new_slides --job_dir /mnt/oskar/hest --gpu 0 --mag 10 --patch_size 1024 --export_entropy_format
+
+    # for stained slides (all slides consolidated in one directory)
+    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/stained_slides --job_dir /mnt/oskar/hest --gpu 0 --mag 40 --patch_size 512 --segmenter entropy
+    # nohup python run_batch_of_slides.py --task coords --wsi_dir /mnt/stained_slides --job_dir /mnt/oskar/hest --gpu 0 --mag 40 --patch_size 512 --export_entropy_format > 40_512.out &
+    # nohup python run_batch_of_slides.py --task coords --wsi_dir /mnt/stained_slides --job_dir /mnt/oskar/hest --gpu 0 --mag 40 --patch_size 1024 --export_entropy_format > 40_1024.out &
+    # nohup python run_batch_of_slides.py --task coords --wsi_dir /mnt/stained_slides --job_dir /mnt/oskar/hest --gpu 0 --mag 10 --patch_size 512 --export_entropy_format > 10_512.out &
+    # nohup python run_batch_of_slides.py --task coords --wsi_dir /mnt/stained_slides --job_dir /mnt/oskar/hest --gpu 0 --mag 10 --patch_size 1024 --export_entropy_format > 10_1024.out &

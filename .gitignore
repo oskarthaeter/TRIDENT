@@ -12,3 +12,4 @@ main
 tutorials/*.png
 tutorials/*.jpeg
 tutorials/*.jpg
+*.csv
