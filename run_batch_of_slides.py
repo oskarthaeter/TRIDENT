@@ -248,7 +248,6 @@ def run_task(processor, args):
                 seg_mag=args.mag,
                 holes_are_tissue=not args.remove_holes,
             )
-
     elif args.task == "coords":
         # Minimal example for tissue patching:
         # python run_batch_of_slides.py --task coords --wsi_dir wsis --job_dir trident_processed --mag 20 --patch_size 256
@@ -266,15 +265,17 @@ def run_task(processor, args):
             # python run_batch_of_slides.py --task feat --wsi_dir wsis --job_dir trident_processed --patch_encoder uni_v1 --mag 20 --patch_size 256
             from trident.patch_encoder_models.load import encoder_factory
 
-            encoder = encoder_factory(args.patch_encoder)
-            processor.run_patch_feature_extraction_job(
-                coords_dir=args.coords_dir
-                or f"{args.mag}x_{args.patch_size}px_{args.overlap}px_overlap",
-                patch_encoder=encoder,
-                device=f"cuda:{args.gpu}",
-                saveas="h5",
-                batch_limit=args.batch_size,
-            )
+            with torch.cuda.nvtx.range("Get Patch Encoder"):
+                encoder = encoder_factory(args.patch_encoder)
+            with torch.cuda.nvtx.range("Run Patch Feature Extraction"):
+                processor.run_patch_feature_extraction_job(
+                    coords_dir=args.coords_dir
+                    or f"{args.mag}x_{args.patch_size}px_{args.overlap}px_overlap",
+                    patch_encoder=encoder,
+                    device=f"cuda:{args.gpu}",
+                    saveas="h5",
+                    batch_limit=args.batch_size,
+                )
         else:
             # Minimal example for feature extraction:
             # python run_batch_of_slides.py --task feat --wsi_dir wsis --job_dir trident_processed --slide_encoder threads --mag 20 --patch_size 256
@@ -295,7 +296,8 @@ def run_task(processor, args):
 
 def main():
     args = parse_arguments()
-    processor = initialize_processor(args)
+    with torch.cuda.nvtx.range("Initialize Processor"):
+        processor = initialize_processor(args)
 
     # ensure cuda is available
     args.device = f"cuda:{args.gpu}" if torch.cuda.is_available() else "cpu"
@@ -312,17 +314,20 @@ def main():
 
 
 if __name__ == "__main__":
-    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench/IMP_CRC/grandqc --gpu 0 --segmenter grandqc
-    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench --mag 20 --patch_size 512 --export_entropy_format
-    # python run_batch_of_slides.py --task feat --wsi_dir /mnt/IMP_CRC/CRS1/slides --job_dir /mnt/patho-bench --patch_encoder uni_v1 --coords_dir /mnt/patho-bench/20x_512px_0px_overlap --batch_size 256
+    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/IMP_CRC/images --job_dir /mnt/patho-bench/IMP_CRC/grandqc --gpu 0 --segmenter grandqc
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/IMP_CRC/images --job_dir /mnt/patho-bench --mag 20 --patch_size 512 --export_entropy_format
+    # python run_batch_of_slides.py --task feat --wsi_dir /mnt/IMP_CRC/images --job_dir /mnt/patho-bench --patch_encoder uni_v1 --coords_dir /mnt/patho-bench/20x_512px_0px_overlap --batch_size 256 --custom_list_of_wsis=S1.csv
+    ## python run_batch_of_slides.py --task feat --wsi_dir /mnt/IMP_CRC/images --job_dir /mnt/patho-bench --patch_encoder uni_v1 --coords_dir /mnt/patho-bench/20x_512px_0px_overlap --batch_size 256 --custom_list_of_wsis=test_S1.csv
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/IMP_CRC/images --job_dir /mnt/patho-bench --mag 40 --patch_size 512 --export_entropy_format
+    # python run_batch_of_slides.py --task feat --wsi_dir /mnt/IMP_CRC/images --job_dir /mnt/patho-bench --patch_encoder uni_v1 --coords_dir /mnt/patho-bench/40x_512px_0px_overlap --batch_size 256
 
     # python run_single_slide.py --slide_path /mnt/IMP_CRC/CRS1/slides/CRC_0777.svs --job_dir /mnt/patho-bench/testing/grandqc --mag 20 --patch_size 256 --segmenter grandqc
     # python run_single_slide.py --slide_path /mnt/oskar/slides/e2024000032t1-a-4_143250.svs --job_dir /mnt/oskar --mag 40 --patch_size 512 --segmenter grandqc
     # python run_single_slide.py --slide_path /mnt/oskar/slides/h2021014634t2-a-5_023026.svs --job_dir /mnt/oskar --mag 40 --patch_size 512 --segmenter hest
     # python run_single_slide.py --slide_path /mnt/oskar/slides/h2023007068t1-a-2_131136.svs --job_dir /mnt/oskar/test --mag 10 --patch_size 2048 --segmenter entropy
-
+    torch.cuda.cudart().cudaProfilerStart()
     main()
-
+    torch.cuda.cudart().cudaProfilerStop()
     # python run_batch_of_slides.py --task seg --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar --gpu 0 --mag 40 --patch_size 512 --segmenter grandqc
     # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar --gpu 0 --mag 40 --patch_size 512 --export_entropy_format
     # python run_batch_of_slides.py --task coords --wsi_dir /mnt/oskar/slides --job_dir /mnt/oskar --gpu 0 --mag 10 --patch_size 512 --export_entropy_format
@@ -364,3 +369,6 @@ if __name__ == "__main__":
     # nohup python run_batch_of_slides.py --task coords --wsi_dir /mnt/stained_slides --job_dir /mnt/oskar/hest --gpu 0 --mag 40 --patch_size 1024 --export_entropy_format > 40_1024.out &
     # nohup python run_batch_of_slides.py --task coords --wsi_dir /mnt/stained_slides --job_dir /mnt/oskar/hest --gpu 0 --mag 10 --patch_size 512 --export_entropy_format > 10_512.out &
     # nohup python run_batch_of_slides.py --task coords --wsi_dir /mnt/stained_slides --job_dir /mnt/oskar/hest --gpu 0 --mag 10 --patch_size 1024 --export_entropy_format > 10_1024.out &
+
+    # for tcga slides
+    # nohup python run_batch_of_slides.py --task seg --wsi_dir /mnt/research2/oskar/TCGA --job_dir /mnt/oskar/TCGA --gpu 0 --mag 40 --patch_size 512 --segmenter hest > tcga.out &

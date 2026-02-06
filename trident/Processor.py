@@ -7,8 +7,9 @@ from typing import Optional, List, Dict, Any
 from inspect import signature
 import geopandas as gpd
 import torch
+import time
 
-from trident.IO import create_lock, remove_lock, is_locked, update_log
+from trident.IO import create_lock, remove_lock, is_locked, update_log, number_of_coords
 from trident.wsi_objects.WSI import OpenSlideWSI
 
 
@@ -657,95 +658,134 @@ class Processor:
         ...     device="cuda:0"
         ... )
         """
-        if saveto is None:
-            saveto = os.path.join(coords_dir, f"features_{patch_encoder.enc_name}")
+        with torch.cuda.nvtx.range("Preamble"):
+            if saveto is None:
+                saveto = os.path.join(coords_dir, f"features_{patch_encoder.enc_name}")
 
-        os.makedirs(os.path.join(self.job_dir, saveto), exist_ok=True)
+            os.makedirs(os.path.join(self.job_dir, saveto), exist_ok=True)
 
-        sig = signature(self.run_patch_feature_extraction_job)
-        local_attrs = {k: v for k, v in locals().items() if k in sig.parameters}
-        self.save_config(
-            saveto=os.path.join(
-                self.job_dir, coords_dir, f"_config_feats_{patch_encoder.enc_name}.json"
-            ),
-            local_attrs=local_attrs,
-            ignore=["patch_encoder", "loop", "valid_slides", "wsis"],
-        )
+            sig = signature(self.run_patch_feature_extraction_job)
+            local_attrs = {k: v for k, v in locals().items() if k in sig.parameters}
+            self.save_config(
+                saveto=os.path.join(
+                    self.job_dir,
+                    coords_dir,
+                    f"_config_feats_{patch_encoder.enc_name}.json",
+                ),
+                local_attrs=local_attrs,
+                ignore=["patch_encoder", "loop", "valid_slides", "wsis"],
+            )
 
-        patch_encoder.eval()
-        patch_encoder.to(device)
-        log_fp = os.path.join(
-            self.job_dir, coords_dir, f"_logs_feats_{patch_encoder.enc_name}.txt"
-        )
-        self.loop = tqdm(
-            self.wsis,
-            desc=f"Extracting patch features from coords in {coords_dir}",
-            total=len(self.wsis),
-        )
+            patch_encoder.eval()
+            patch_encoder.to(device)
+            log_fp = os.path.join(
+                self.job_dir, coords_dir, f"_logs_feats_{patch_encoder.enc_name}.txt"
+            )
+            self.loop = tqdm(
+                self.wsis,
+                desc=f"Extracting patch features from coords in {coords_dir}",
+                total=len(self.wsis),
+            )
+            wsi_throughputs = []
+            overall_num_of_patches = 0
+            overall_loop_start_time = time.perf_counter()
+
+        torch.cuda.nvtx.range_push("WSI Loop")
         for wsi in self.loop:
-            wsi_feats_fp = os.path.join(self.job_dir, saveto, f"{wsi.name}.{saveas}")
-            # Check if features already exist
-            if os.path.exists(wsi_feats_fp) and not is_locked(wsi_feats_fp):
-                self.loop.set_postfix_str(
-                    f"Features already extracted for {wsi}. Skipping..."
+            wsi_start_time = time.perf_counter()
+            with torch.cuda.nvtx.range("exist check"):
+                wsi_feats_fp = os.path.join(
+                    self.job_dir, saveto, f"{wsi.name}.{saveas}"
                 )
-                update_log(log_fp, f"{wsi.name}{wsi.ext}", "Features extracted.")
-                self.cleanup(f"{wsi.name}{wsi.ext}")
-                continue
-
-            # Check if WSI is available in cache
-            if self.wsi_cache is not None:
-                if is_locked(
-                    os.path.join(self.wsi_cache, f"{wsi.name}{wsi.ext}")
-                ) or not os.path.exists(
-                    os.path.join(self.wsi_cache, f"{wsi.name}{wsi.ext}")
-                ):
+                # Check if features already exist
+                if os.path.exists(wsi_feats_fp) and not is_locked(wsi_feats_fp):
                     self.loop.set_postfix_str(
-                        f"{wsi.name}{wsi.ext} not found in cache. Skipping..."
+                        f"Features already extracted for {wsi}. Skipping..."
                     )
-                    update_log(
-                        log_fp, f"{wsi.name}{wsi.ext}", "WSI not found in cache."
-                    )
+                    update_log(log_fp, f"{wsi.name}{wsi.ext}", "Features extracted.")
+                    self.cleanup(f"{wsi.name}{wsi.ext}")
                     continue
 
-            # Check if coords exist
-            coords_path = os.path.join(
-                self.job_dir, coords_dir, "patches", f"{wsi.name}_patches.h5"
-            )
-            if not os.path.exists(coords_path) and not os.path.exists(coords_path):
-                self.loop.set_postfix_str(
-                    f"Coords not found for {wsi.name}. Skipping..."
-                )
-                update_log(log_fp, f"{wsi.name}{wsi.ext}", "Coords not found.")
-                continue
+            with torch.cuda.nvtx.range("cache check"):
+                # Check if WSI is available in cache
+                if self.wsi_cache is not None:
+                    if is_locked(
+                        os.path.join(self.wsi_cache, f"{wsi.name}{wsi.ext}")
+                    ) or not os.path.exists(
+                        os.path.join(self.wsi_cache, f"{wsi.name}{wsi.ext}")
+                    ):
+                        self.loop.set_postfix_str(
+                            f"{wsi.name}{wsi.ext} not found in cache. Skipping..."
+                        )
+                        update_log(
+                            log_fp, f"{wsi.name}{wsi.ext}", "WSI not found in cache."
+                        )
+                        continue
 
-            # Check if another process has claimed this slide
-            if is_locked(wsi_feats_fp):
-                self.loop.set_postfix_str(f"{wsi.name} is locked. Skipping...")
-                continue
+            # Check if coords exist
+            with torch.cuda.nvtx.range("coords check"):
+                coords_path = os.path.join(
+                    self.job_dir, coords_dir, "patches", f"{wsi.name}_patches.h5"
+                )
+                if not os.path.exists(coords_path) and not os.path.exists(coords_path):
+                    self.loop.set_postfix_str(
+                        f"Coords not found for {wsi.name}. Skipping..."
+                    )
+                    update_log(log_fp, f"{wsi.name}{wsi.ext}", "Coords not found.")
+                    continue
+
+            with torch.cuda.nvtx.range("lock check"):
+                # Check if another process has claimed this slide
+                if is_locked(wsi_feats_fp):
+                    self.loop.set_postfix_str(f"{wsi.name} is locked. Skipping...")
+                    continue
 
             try:
-                self.loop.set_postfix_str(
-                    f"Extracting features from {wsi.name}{wsi.ext}"
-                )
-                create_lock(wsi_feats_fp)
-                update_log(
-                    log_fp, f"{wsi.name}{wsi.ext}", "LOCKED. Extracting features..."
-                )
+                with torch.cuda.nvtx.range("create lock"):
+                    self.loop.set_postfix_str(
+                        f"Extracting features from {wsi.name}{wsi.ext}"
+                    )
+                    create_lock(wsi_feats_fp)
+                    update_log(
+                        log_fp, f"{wsi.name}{wsi.ext}", "LOCKED. Extracting features..."
+                    )
 
                 # under construction
-                wsi.extract_patch_features(
-                    patch_encoder,
-                    coords_path=coords_path,
-                    save_features=os.path.join(self.job_dir, saveto),
-                    device=device,
-                    saveas=saveas,
-                    batch_limit=batch_limit,
-                )
+                with torch.cuda.nvtx.range("extract features"):
+                    wsi.extract_patch_features(
+                        patch_encoder,
+                        coords_path=coords_path,
+                        save_features=os.path.join(self.job_dir, saveto),
+                        device=device,
+                        saveas=saveas,
+                        batch_limit=batch_limit,
+                    )
 
-                remove_lock(wsi_feats_fp)
-                update_log(log_fp, f"{wsi.name}{wsi.ext}", "Features extracted.")
-                self.cleanup(f"{wsi.name}{wsi.ext}")
+                with torch.cuda.nvtx.range("remove lock"):
+                    remove_lock(wsi_feats_fp)
+
+                with torch.cuda.nvtx.range("logging"):
+                    wsi_end_time = time.perf_counter()
+                    wsi_num_of_patches = number_of_coords(coords_path)
+                    wsi_duration = wsi_end_time - wsi_start_time
+                    wsi_throughput = wsi_num_of_patches / wsi_duration
+                    if wsi_num_of_patches == 0:
+                        wsi_throughput = float("nan")
+                    else:
+                        wsi_throughputs.append(wsi_throughput)
+                        overall_num_of_patches += wsi_num_of_patches
+                    self.loop.set_postfix_str(
+                        f"Throughput: {wsi_throughput:.2f} tiles/s"
+                    )
+
+                    update_log(
+                        log_fp,
+                        f"{wsi.name}{wsi.ext}",
+                        f"Features extracted in {wsi_duration:.2f} seconds ({wsi_throughput:.2f} tiles/s).",
+                    )
+
+                with torch.cuda.nvtx.range("cleanup"):
+                    self.cleanup(f"{wsi.name}{wsi.ext}")
             except Exception as e:
                 if isinstance(e, KeyboardInterrupt):
                     remove_lock(wsi_feats_fp)
@@ -754,6 +794,25 @@ class Processor:
                     continue
                 else:
                     raise e
+        torch.cuda.nvtx.range_pop()
+
+        overall_loop_end_time = time.perf_counter()
+        overall_duration = overall_loop_end_time - overall_loop_start_time
+        overall_throughput = (
+            overall_num_of_patches / overall_duration
+            if overall_duration > 0
+            else float("nan")
+        )
+        avg_throughput = (
+            sum(wsi_throughputs) / len(wsi_throughputs)
+            if len(wsi_throughputs) > 0
+            else float("nan")
+        )
+        update_log(
+            log_fp,
+            "Overall",
+            f"Feature extraction completed in {overall_duration:.2f} seconds (Overall={overall_throughput:.2f} tiles/s, avg={avg_throughput:.2f}).",
+        )
 
         # Return the directory where the features are saved
         return os.path.join(self.job_dir, saveto)

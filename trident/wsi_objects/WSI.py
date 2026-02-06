@@ -718,6 +718,7 @@ class OpenSlideWSI:
         overlap: int = 0,
         min_tissue_proportion: float = 0.0,
         export_entropy_format: bool = False,
+        k_random_patches: int | None = None,
     ) -> str:
         """
         The `extract_tissue_coords` function of the class `OpenSlideWSI` extracts patch coordinates
@@ -738,6 +739,8 @@ class OpenSlideWSI:
             Minimum proportion of the patch under tissue to be kept. Defaults to 0.
         export_entropy_format : bool, optional
             If True, export the coordinates in a format compatible with (offset, bytecount) dataloading. Defaults to False.
+        k_random_patches : int | None, optional
+            If set, randomly sample k patches from the extracted tissue coordinates. Defaults to None.
 
         Returns:
         --------
@@ -764,6 +767,12 @@ class OpenSlideWSI:
         )
 
         coords_to_keep = [(x, y) for x, y in patcher]
+        if k_random_patches is not None and k_random_patches < len(coords_to_keep):
+            np.random.seed(42)  # For reproducibility
+            selected_indices = np.random.choice(
+                len(coords_to_keep), size=k_random_patches, replace=False
+            )
+            coords_to_keep = [coords_to_keep[i] for i in selected_indices]
 
         # Prepare assets for saving
         assets = {"coords": np.array(coords_to_keep)}
@@ -975,81 +984,88 @@ class OpenSlideWSI:
         >>> print(features_path)
         output_features/sample_name.h5
         """
-        self._lazy_initialize()
+        with torch.cuda.nvtx.range("lazy initialize"):
+            self._lazy_initialize()
 
         precision = patch_encoder.precision
         patch_transforms = patch_encoder.eval_transforms
 
-        try:
-            coords_attrs, coords = read_coords(coords_path)
-            patch_size = coords_attrs.get("patch_size", None)
-            level0_magnification = coords_attrs.get("level0_magnification", None)
-            target_magnification = coords_attrs.get("target_magnification", None)
-            if None in (patch_size, level0_magnification, target_magnification):
-                raise KeyError("Missing attributes in coords_attrs.")
-        except (KeyError, FileNotFoundError, ValueError) as e:
-            warnings.warn(
-                f"Cannot read using Trident coords format ({str(e)}). Trying with CLAM/Fishing-Rod."
+        with torch.cuda.nvtx.range("read coords"):
+            try:
+                coords_attrs, coords = read_coords(coords_path)
+                patch_size = coords_attrs.get("patch_size", None)
+                level0_magnification = coords_attrs.get("level0_magnification", None)
+                target_magnification = coords_attrs.get("target_magnification", None)
+                if None in (patch_size, level0_magnification, target_magnification):
+                    raise KeyError("Missing attributes in coords_attrs.")
+            except (KeyError, FileNotFoundError, ValueError) as e:
+                warnings.warn(
+                    f"Cannot read using Trident coords format ({str(e)}). Trying with CLAM/Fishing-Rod."
+                )
+                patch_size, patch_level, custom_downsample, coords = read_coords_legacy(
+                    coords_path
+                )
+                level0_magnification = self.mag
+                target_magnification = int(
+                    self.mag / (self.level_downsamples[patch_level] * custom_downsample)
+                )
+        with torch.cuda.nvtx.range("create patcher"):
+            patcher = self.create_patcher(
+                patch_size=patch_size,
+                src_mag=level0_magnification,
+                dst_mag=target_magnification,
+                custom_coords=coords,
+                coords_only=False,
+                pil=True,
             )
-            patch_size, patch_level, custom_downsample, coords = read_coords_legacy(
-                coords_path
+            dataset = WSIPatcherDataset(patcher, patch_transforms)
+            dataloader = DataLoader(
+                dataset,
+                batch_size=batch_limit,
+                # num_workers=get_num_workers(batch_limit),
+                num_workers=1,
+                pin_memory=True,
             )
-            level0_magnification = self.mag
-            target_magnification = int(
-                self.mag / (self.level_downsamples[patch_level] * custom_downsample)
-            )
-
-        patcher = self.create_patcher(
-            patch_size=patch_size,
-            src_mag=level0_magnification,
-            dst_mag=target_magnification,
-            custom_coords=coords,
-            coords_only=False,
-            pil=True,
-        )
-        dataset = WSIPatcherDataset(patcher, patch_transforms)
-        dataloader = DataLoader(
-            dataset,
-            batch_size=batch_limit,
-            num_workers=get_num_workers(batch_limit),
-            pin_memory=True,
-        )
 
         features = []
-        for imgs, _ in dataloader:
-            imgs = imgs.to(device)
-            with torch.autocast(
-                device_type="cuda",
-                dtype=precision,
-                enabled=(precision != torch.float32),
-            ):
-                batch_features = patch_encoder(imgs)
-            features.append(batch_features.cpu().numpy())
+        with torch.cuda.nvtx.range("extraction loop"):
+            for imgs, _ in dataloader:
+                imgs = imgs.to(device)
+                with torch.autocast(
+                    device_type="cuda",
+                    dtype=precision,
+                    enabled=(precision != torch.float32),
+                ):
+                    batch_features = patch_encoder(imgs)
+                features.append(batch_features.cpu().numpy())
 
         # Concatenate features
-        features = np.concatenate(features, axis=0)
+        with torch.cuda.nvtx.range("save features"):
+            features = np.concatenate(features, axis=0)
 
-        # Save the features to disk
-        os.makedirs(save_features, exist_ok=True)
-        if saveas == "h5":
-            save_h5(
-                os.path.join(save_features, f"{self.name}.{saveas}"),
-                assets={
-                    "features": features,
-                    "coords": coords,
-                },
-                attributes={
-                    "features": {"name": self.name, "savetodir": save_features},
-                    "coords": coords_attrs,
-                },
-                mode="w",
-            )
-        elif saveas == "pt":
-            torch.save(features, os.path.join(save_features, f"{self.name}.{saveas}"))
-        else:
-            raise ValueError(
-                f'Invalid save_features_as: {saveas}. Only "h5" and "pt" are supported.'
-            )
+            # Save the features to disk
+            os.makedirs(save_features, exist_ok=True)
+            if saveas == "h5":
+                save_h5(
+                    os.path.join(save_features, f"{self.name}.{saveas}"),
+                    assets={
+                        "features": features,
+                        "coords": coords,
+                    },
+                    attributes={
+                        "features": {"name": self.name, "savetodir": save_features},
+                        "coords": coords_attrs,
+                    },
+                    mode="w",
+                )
+            elif saveas == "pt":
+                torch.save(
+                    features, os.path.join(save_features, f"{self.name}.{saveas}")
+                )
+            else:
+                raise ValueError(
+                    f'Invalid save_features_as: {saveas}. Only "h5" and "pt" are supported.'
+                )
 
         return os.path.join(save_features, f"{self.name}.{saveas}")
 

@@ -397,6 +397,37 @@ def read_coords_legacy(coords_path):
     return patch_size, patch_level, custom_downsample, coords
 
 
+def number_of_coords(coords_path):
+    """
+    The `number_of_coords` function retrieves the number of patch coordinates stored in an HDF5 file.
+    This is useful for quickly assessing the size of a dataset without loading all the coordinates
+    into memory.
+
+    Parameters:
+    -----------
+    coords_path : str
+        The path to the HDF5 file containing patch coordinates.
+
+    Returns:
+    --------
+    int
+        The number of patch coordinates stored in the file.
+
+    Example:
+    --------
+    >>> num_coords = number_of_coords("patch_coords.h5")
+    >>> print(num_coords)
+    1500
+    """
+    try:
+        with h5py.File(coords_path, "r") as f:
+            num_coords = f["coords"].shape[0]
+    except Exception as e:
+        print(f"WARNING: Could not read number of coords from {coords_path} due to {e}")
+        num_coords = 0
+    return num_coords
+
+
 def mask_to_gdf(
     mask: np.ndarray,
     keep_ids: List[int] = [],

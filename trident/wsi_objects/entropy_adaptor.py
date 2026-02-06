@@ -77,7 +77,7 @@ def save_entropy_patches(
 
     Args:
         slide_path (Path): Path to the whole-slide image file.
-        clam_patches_path (Path): Path to the HDF5 file containing CLAM patches.
+        patches_path (Path): Path to the HDF5 file containing non-tile-aligned patch-coordinates.
         output_dir (Path): Directory to save the output HDF5 file.
         assets (dict): Dictionary containing the original coords.
         attributes (dict): Dictionary containing the original attributes.
@@ -163,37 +163,70 @@ def save_entropy_patches(
 
     # Save results to an HDF5 file
     with h5py.File(patches_path, "w") as f:
+        num_tiles = len(tiles)
+        # 1) write top-level attrs ASAP, cast to built-ins
+        f.attrs.update(
+            {
+                "original_tile_size": int(original_tile_size),
+                "target_tile_size": int(patch_size),
+                "width": int(slide_width),
+                "height": int(slide_height),
+                "aggregated": bool(original_tile_size != patch_size),
+                "use_jpeg_tables": bool(jpeg_tables is not None),
+                "num_tiles": int(num_tiles),
+            }
+        )
+        f.flush()  # optional, but helps diagnose viewer issues
+
+        # 2) create datasets robustly
         num_subtiles = int((patch_size // original_tile_size) ** 2)
-        # Prepare datasets
-        offsets = np.array([tile.offset for tile in tiles], dtype=np.uint64).reshape(
-            -1, num_subtiles
-        )
-        f.create_dataset("offsets", data=offsets, dtype="uint64")
 
-        bytecounts = np.array(
-            [tile.bytecount for tile in tiles], dtype=np.uint32
-        ).reshape(-1, num_subtiles)
-        f.create_dataset("bytecounts", data=bytecounts, dtype="uint32")
+        if len(tiles) == 0:
+            # create empty datasets with correct dtypes/shapes
+            f.create_dataset("offsets", shape=(0, num_subtiles), dtype="uint64")
+            f.create_dataset("bytecounts", shape=(0, num_subtiles), dtype="uint32")
+            f.create_dataset("coords", shape=(0, 2), dtype="uint32")
+        else:
+            offsets = np.array([t.offset for t in tiles], dtype=np.uint64).reshape(
+                -1, num_subtiles
+            )
+            bytects = np.array([t.bytecount for t in tiles], dtype=np.uint32).reshape(
+                -1, num_subtiles
+            )
+            coords_np = revert_coords(
+                np.array([t.coord for t in tiles], dtype=np.uint32).reshape(-1, 2)
+            )
+            f.create_dataset("offsets", data=offsets, dtype="uint64")
+            f.create_dataset("bytecounts", data=bytects, dtype="uint32")
+            coord_ds = f.create_dataset("coords", data=coords_np, dtype="uint32")
 
-        coords = revert_coords(
-            np.array([tile.coord for tile in tiles], dtype=np.uint32).reshape(-1, 2)
-        )
-        coord_dataset = f.create_dataset("coords", data=coords, dtype="uint32")
-        coord_dataset.attrs.update(attributes)
+            # 3) dataset attrs: keep simple, or guard to avoid aborts
+            try:
+                safe_attrs = {
+                    k: (
+                        int(v)
+                        if isinstance(v, (np.integer,))
+                        else (
+                            float(v)
+                            if isinstance(v, (np.floating,))
+                            else (
+                                bool(v)
+                                if isinstance(v, (np.bool_, bool))
+                                else str(v) if isinstance(v, (Path,)) else v
+                            )
+                        )
+                    )
+                    for k, v in attributes.items()
+                    if np.isscalar(v) or isinstance(v, (str, bytes, Path, bool))
+                }
+                coord_ds.attrs.update(safe_attrs)
+            except Exception as e:
+                # log but don't fail before file-level attrs are persisted
+                print(f"Skipping coord attrs due to: {e}")
 
-        # Add JPEG tables if present
         if jpeg_tables is not None:
             f.create_dataset(
                 "jpeg_tables",
                 data=np.frombuffer(jpeg_tables, dtype=np.uint8),
                 dtype="uint8",
             )
-
-        # Store metadata as attributes
-        f.attrs["original_tile_size"] = original_tile_size
-        f.attrs["target_tile_size"] = patch_size
-        f.attrs["width"] = slide_width
-        f.attrs["height"] = slide_height
-        f.attrs["num_tiles"] = len(tiles)
-        f.attrs["aggregated"] = original_tile_size != patch_size
-        f.attrs["use_jpeg_tables"] = jpeg_tables is not None

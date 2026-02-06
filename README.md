@@ -1,3 +1,36 @@
+# Profiling
+
+
+
+```shell
+sudo nsys profile \
+    -c cudaProfilerApi --capture-range-end=stop \
+    -w true --force-overwrite true \
+    -t cuda,osrt,nvtx,posix \
+    --sample=process-tree \
+    --cpuctxsw=process-tree \
+    --cudabacktrace=all \
+    --cuda-event-trace=false \
+    -o trident_hest_uni \
+    -- /opt/venv/bin/python run_single_slide.py --slide_path /mnt/research2/oskar/TCGA/TCGA-CE-A3ME-01Z-00-DX1.BCF7C127-B617-43C3-9D54-E10310EE9DA5.svs --job_dir output --segmenter hest  --mag 40 --patch_size 512 --patch_encoder uni_v1
+```
+
+```shell
+sudo nsys profile \
+    -w true --force-overwrite true \
+    -t cuda,osrt,nvtx \
+    --sample=process-tree \
+    --cpuctxsw=process-tree \
+    --cudabacktrace=all \
+    --cuda-event-trace=false \
+    -o trident_uni \
+    -- /opt/venv/bin/python run_batch_of_slides.py --task feat --wsi_dir /mnt/IMP_CRC/images --job_dir /mnt/patho-bench --patch_encoder uni_v1 --coords_dir /mnt/patho-bench/40x_512px_0px_overlap --batch_size 256 --custom_list_of_wsis=test_S1.csv
+```
+
+
+
+
+
 # 🔱   Trident
 
  [arXiv](https://arxiv.org/pdf/2502.06750) | [Blog](https://www.linkedin.com/pulse/announcing-new-open-source-tools-accelerate-ai-pathology-andrew-zhang-loape/?trackingId=pDkifo54SRuJ2QeGiGcXpQ%3D%3D) | [Cite](https://github.com/mahmoodlab/trident?tab=readme-ov-file#reference)

@@ -9,6 +9,8 @@ python run_single_slide.py --slide_path output/wsis/394140.svs --job_dir output/
 
 import argparse
 import os
+import torch
+import time
 
 from trident import OpenSlideWSI
 from trident.segmentation_models import segmentation_model_factory
@@ -20,6 +22,12 @@ def parse_arguments():
     Parse command-line arguments for processing a single WSI.
     """
     parser = argparse.ArgumentParser(description="Process a WSI from A to Z.")
+    parser.add_argument(
+        "--benchmark",
+        action="store_true",
+        default=False,
+        help="Whether to run in benchmark mode",
+    )
     parser.add_argument(
         "--gpu", type=int, default=0, help="GPU index to use for processing tasks"
     )
@@ -45,6 +53,7 @@ def parse_arguments():
             "virchow2",
             "hoptimus0",
             "hoptimus1",
+            "h0mini",
             "phikon_v2",
             "conch_v15",
             "musk",
@@ -107,6 +116,12 @@ def parse_arguments():
         default=False,
         help="Whether to adjust coords so that tile-aligned dataloader can be used for patch extraction.",
     )
+    parser.add_argument(
+        "--k_random_patches",
+        type=int,
+        default=None,
+        help="If set, randomly sample k patches from the extracted tissue coordinates for feature extraction.",
+    )
     return parser.parse_args()
 
 
@@ -114,39 +129,50 @@ def process_slide(args):
     """
     Process a single WSI by performing segmentation, patch extraction, and feature extraction sequentially.
     """
-
+    start_time = time.perf_counter()
     # Initialize the WSI
-    print(f"Processing slide: {args.slide_path}")
+    # print(f"Processing slide: {args.slide_path}")
+    torch.cuda.nvtx.range_push("Initialize WSI")
     slide = OpenSlideWSI(
         slide_path=args.slide_path,
         lazy_init=False,
         custom_mpp_keys=args.custom_mpp_keys,
     )
+    torch.cuda.nvtx.range_pop()
 
     # Step 1: Tissue Segmentation
-    print("Running tissue segmentation...")
+    # print("Running tissue segmentation...")
+    exclude_segment_loading_duration = 0.0
+    torch.cuda.nvtx.range_push("Tissue Segmentation")
     if args.segmenter == "entropy":
         slide.segment_tissue_alternative(
             holes_are_tissue=False,
             job_dir=args.job_dir,
         )
     else:
+        exclude_segment_loading_start = time.perf_counter()
         segmentation_model = segmentation_model_factory(
             model_name=args.segmenter,
             confidence_thresh=args.seg_conf_thresh,
             device=f"cuda:{args.gpu}",
+        )
+        exclude_segment_loading_end = time.perf_counter()
+        exclude_segment_loading_duration = (
+            exclude_segment_loading_end - exclude_segment_loading_start
         )
         slide.segment_tissue(
             segmentation_model=segmentation_model,
             target_mag=segmentation_model.target_mag,
             job_dir=args.job_dir,
         )
-    print(
-        f"Tissue segmentation completed. Results saved to {args.job_dir}/contours_geojson and {args.job_dir}/contours"
-    )
+    torch.cuda.nvtx.range_pop()
+    # print(
+    #     f"Tissue segmentation completed. Results saved to {args.job_dir}/contours_geojson and {args.job_dir}/contours"
+    # )
 
     # Step 2: Tissue Coordinate Extraction (Patching)
-    print("Extracting tissue coordinates...")
+    # print("Extracting tissue coordinates...")
+    torch.cuda.nvtx.range_push("Tissue Coordinate Extraction")
     save_coords = os.path.join(
         args.job_dir, f"{args.mag}x_{args.patch_size}px_{args.overlap}px_overlap"
     )
@@ -156,37 +182,94 @@ def process_slide(args):
         patch_size=args.patch_size,
         save_coords=save_coords,
         export_entropy_format=args.export_entropy_format,
+        k_random_patches=args.k_random_patches,
     )
-    print(f"Tissue coordinates extracted and saved to {coords_path}.")
+    torch.cuda.nvtx.range_pop()
+    # print(f"Tissue coordinates extracted and saved to {coords_path}.")
 
     # Step 3: Visualize patching
-    viz_coords_path = slide.visualize_coords(
-        coords_path=coords_path,
-        save_patch_viz=os.path.join(save_coords, "visualization"),
-    )
-    print(f"Tissue coordinates extracted and saved to {viz_coords_path}.")
+    if not args.benchmark:
+        torch.cuda.nvtx.range_push("Visualize Patching")
+        viz_coords_path = slide.visualize_coords(
+            coords_path=coords_path,
+            save_patch_viz=os.path.join(save_coords, "visualization"),
+        )
+        torch.cuda.nvtx.range_pop()
+    # print(f"Tissue coordinates extracted and saved to {viz_coords_path}.")
 
     # Step 4: Feature Extraction
     # print("Extracting features from patches...")
-    # encoder = encoder_factory(args.patch_encoder)
-    # encoder.eval()
-    # encoder.to(f"cuda:{args.gpu}")
-    # features_path = features_dir = os.path.join(
-    #     save_coords, "features_{}".format(args.patch_encoder)
-    # )
-    # slide.extract_patch_features(
-    #     patch_encoder=encoder,
-    #     coords_path=os.path.join(save_coords, "patches", f"{slide.name}_patches.h5"),
-    #     save_features=features_dir,
-    #     device=f"cuda:{args.gpu}",
-    # )
+    torch.cuda.nvtx.range_push("Feature Extraction")
+    exclude_encoder_loading_start = time.perf_counter()
+    encoder = encoder_factory(args.patch_encoder)
+    encoder.eval()
+    encoder.to(f"cuda:{args.gpu}")
+    exclude_encoder_loading_end = time.perf_counter()
+    exclude_encoder_loading_duration = (
+        exclude_encoder_loading_end - exclude_encoder_loading_start
+    )
+
+    features_path = features_dir = os.path.join(
+        save_coords, "features_{}".format(args.patch_encoder)
+    )
+    slide.extract_patch_features(
+        patch_encoder=encoder,
+        coords_path=os.path.join(save_coords, "patches", f"{slide.name}_patches.h5"),
+        save_features=features_dir,
+        device=f"cuda:{args.gpu}",
+    )
+    torch.cuda.nvtx.range_pop()
     # print(f"Feature extraction completed. Results saved to {features_path}")
+    end_time = time.perf_counter()
+    total_duration = end_time - start_time
+    effective_duration = (
+        total_duration
+        - exclude_segment_loading_duration
+        - exclude_encoder_loading_duration
+    )
+    return effective_duration
+
+
+def clear_job_dir(job_dir):
+    if os.path.exists(job_dir):
+        for root, dirs, files in os.walk(job_dir, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
+    if not os.path.exists(job_dir):
+        os.makedirs(job_dir)
 
 
 def main():
     args = parse_arguments()
-    process_slide(args)
+    # clear job dir
+    if args.benchmark:
+        n = 25
+        # warm-up run
+        process_slide(args)
+
+        # timed runs
+        durations = []
+        for _ in range(n):
+            clear_job_dir(args.job_dir)
+            durations.append(process_slide(args))
+
+        # print all durations in csv format
+        print("Duration (seconds)")
+        for i, duration in enumerate(durations):
+            print(duration)
+    else:
+        process_slide(args)
 
 
 if __name__ == "__main__":
+    torch.cuda.cudart().cudaProfilerStart()
     main()
+    torch.cuda.cudart().cudaProfilerStop()
+
+    # python run_single_slide.py --slide_path /mnt/research2/oskar/TCGA/TCGA-CE-A3ME-01Z-00-DX1.BCF7C127-B617-43C3-9D54-E10310EE9DA5.svs --job_dir output/ --segmenter hest --mag 40 --patch_size 512 --patch_encoder h0mini
+    ## 62.49 seconds
+    # python run_single_slide.py --slide_path /mnt/research2/oskar/TCGA/TCGA-CE-A3ME-01Z-00-DX1.BCF7C127-B617-43C3-9D54-E10310EE9DA5.svs --job_dir output/ --segmenter hest --mag 40 --patch_size 512 --patch_encoder h0mini --k_random_patches 20
+    ## 5.57 seconds
+    # python run_single_slide.py --slide_path /mnt/research2/oskar/TCGA/TCGA-CE-A3ME-01Z-00-DX1.BCF7C127-B617-43C3-9D54-E10310EE9DA5.svs --job_dir output/ --segmenter entropy --export_entropy_format --mag 40 --patch_size 512 --patch_encoder h0mini
