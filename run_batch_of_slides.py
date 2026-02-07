@@ -372,3 +372,10 @@ if __name__ == "__main__":
 
     # for tcga slides
     # nohup python run_batch_of_slides.py --task seg --wsi_dir /mnt/research2/oskar/TCGA --job_dir /mnt/oskar/TCGA --gpu 0 --mag 40 --patch_size 512 --segmenter hest > tcga.out &
+
+    ## for Heidlberg slides
+    # python run_batch_of_slides.py --task seg --wsi_dir /mnt/research2/oskar/Heidelberg --job_dir /mnt/nfs01-R0/ge96giq/Heidelberg/hest --gpu 0 --mag 40 --patch_size 512 --segmenter hest
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/research2/oskar/Heidelberg --job_dir /mnt/nfs01-R0/ge96giq/Heidelberg/hest --gpu 0 --mag 40 --patch_size 512 --export_entropy_format
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/research2/oskar/Heidelberg --job_dir /mnt/nfs01-R0/ge96giq/Heidelberg/hest --gpu 0 --mag 40 --patch_size 1024 --export_entropy_format
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/research2/oskar/Heidelberg --job_dir /mnt/nfs01-R0/ge96giq/Heidelberg/hest --gpu 0 --mag 10 --patch_size 512 --export_entropy_format
+    # python run_batch_of_slides.py --task coords --wsi_dir /mnt/research2/oskar/Heidelberg --job_dir /mnt/nfs01-R0/ge96giq/Heidelberg/hest --gpu 0 --mag 10 --patch_size 1024 --export_entropy_format

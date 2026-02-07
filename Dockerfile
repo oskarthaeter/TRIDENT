@@ -29,7 +29,7 @@ ENV PATH="${VENV_PATH}/bin:${PATH}"
 RUN python -m pip install --upgrade pip \
  && python -m pip install --no-cache-dir \
     torch==2.8.0 torchvision --index-url https://download.pytorch.org/whl/cu129 \
- && python -m pip install -U --no-cache-dir xformers --extra-index-url https://download.pytorch.org/whl/cu129 \
+#  && python -m pip install -U --no-cache-dir xformers --extra-index-url https://download.pytorch.org/whl/cu129 \
  && python -m pip install --no-cache-dir \
     openslide-python scikit-image numpy ipykernel
 

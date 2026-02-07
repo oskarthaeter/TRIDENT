@@ -11,9 +11,8 @@ license = "CC BY-NC-ND 4.0"  # Specify your package's license if different.
 repository = "https://github.com/mahmoodlab/TRIDENT"
 
 [tool.poetry.dependencies]
-python = "^3.10"  # Specify the Python version compatibility.
+python = "^3.10"
 ipywidgets = "*"
-torch = "*"
 transformers = "*"
 tqdm = "*"
 h5py = "*"
